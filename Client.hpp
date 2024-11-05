@@ -19,14 +19,13 @@
 #define YEL "\e[1;33m" //-> for yellow color
 //-------------------------------------------------------//
 
-
 class Client
 {
     protected:
 
     private:
         int Fd;
-        std::string IPadd;
+        std::string Ip;
 
     public:
         ~Client(void);
@@ -34,7 +33,8 @@ class Client
         Client(const Client &cp);
         Client& operator=(const Client &other);
         int GetFd(void);
+        std::string GetIp();
         void SetFd(int fd);
-        void setIpAdd(std::string ipadd);
+        void setIp(std::string ipadd);
 };
 #endif

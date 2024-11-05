@@ -36,13 +36,13 @@ class Server
         Server(void);
         Server(const Server &cp);
         Server& operator=(const Server &other);
+        void CloseFds(void);
         void ServerInit(void);
-        void SerSocket(void);
+        void SocketInit(void);
+        void ClearClients(int fd);
         void AcceptNewClient(void);
         void ReceiveNewData(int fd);
         static void SignalHandler(int signum);
-        void CloseFds(void);
-        void ClearClients(int fd);
 };
 
 #endif

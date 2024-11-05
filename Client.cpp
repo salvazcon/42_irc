@@ -12,8 +12,8 @@ Client::Client()
 
 Client& Client::operator=(const Client &other)
 {
-    //(<-- Datos a copiar.)
-	(void)other;
+    this->Fd = other.Fd;
+	this->Ip = other.Ip;
 	std::cout << "Client copy assignment operator called" << std::endl;
 	return *this;
 }
@@ -29,12 +29,17 @@ int Client::GetFd()
 	return Fd;
 }
 
+std::string Client::GetIp()
+{
+	return Ip;
+}
+
 void Client::SetFd(int fd)
 {
 	this->Fd = fd;
 }
 
-void Client::setIpAdd(std::string ipadd)
+void Client::setIp(std::string Ip)
 {
-	this->IPadd = ipadd;
+	this->Ip = Ip;
 }
