@@ -39,7 +39,7 @@ class Server
         void CloseFds(void);
         void ServerInit(void);
         void SocketInit(void);
-        void ClearClients(int fd);
+        void ClearClient(int fd);
         void AcceptNewClient(void);
         void ReceiveNewData(int fd);
         static void SignalHandler(int signum);

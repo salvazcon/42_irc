@@ -1,4 +1,4 @@
-NAME		= Program
+NAME		= ircserv
 SRCS		= main.cpp Server.cpp Client.cpp
 OBJS		= ${SRCS:%.cpp=%.o}
 DEPS		= ${SRCS:.cpp=.d}
