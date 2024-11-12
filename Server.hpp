@@ -11,6 +11,7 @@
 #include <arpa/inet.h>
 #include <poll.h>
 #include <csignal>
+#include <cstdlib>
 #include <cstring>
 #include "Client.hpp"
 //-------------------------------------------------------//
@@ -28,12 +29,14 @@ class Server
         int Port;
         int SerSocketFd;
         static bool Signal;
+        std::string Passwd;
         std::vector<Client> clients;
         std::vector<struct pollfd> fds;
 
     public:
         ~Server(void);
         Server(void);
+        Server(int port, std::string passwd);
         Server(const Server &cp);
         Server& operator=(const Server &other);
         void CloseFds(void);

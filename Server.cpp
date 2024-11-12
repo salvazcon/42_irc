@@ -11,12 +11,15 @@ Server::Server(): SerSocketFd(-1)
     //std::cout << "Server constructor called" << std::endl;
 }
 
-/* Server::Server(std::string port, std::string pswd): SerSocketFd(-1)
+bool Server::Signal = false; //-> initialize the static boolean
+
+Server::Server(int port, std::string passwd)
 {
-    this->port = stoi(port);
-	this->port = stoi(pswd);
+    this->SerSocketFd = -1;
+	this->Port = port;
+	this->Passwd = passwd;
 	std::cout << "Server constructor called" << std::endl;
-} */
+}
 
 Server& Server::operator=(const Server &other)
 {
@@ -32,7 +35,6 @@ Server::Server(const Server &cp)
 	*this = cp;
 }
 
-bool Server::Signal = false; //-> initialize the static boolean
 void Server::SignalHandler(int signum)
 {
 	(void)signum;
@@ -43,8 +45,8 @@ void Server::SignalHandler(int signum)
 void Server::CloseFds()
 {
 	for(size_t i = 0; i < clients.size(); i++){
-		std::cout << RED << "Client <" << clients[i].GetFd() << "> Disconnected" << WHI << std::endl;
-		close(clients[i].GetFd());
+		std::cout << RED << "Client <" << clients[i].getFd() << "> Disconnected" << WHI << std::endl;
+		close(clients[i].getFd());
 	}
 	if (SerSocketFd != -1){
 		std::cout << RED << "Server <" << SerSocketFd << "> Disconnected" << WHI << std::endl;
@@ -60,29 +62,99 @@ void Server::ClearClient(int fd)
 		}
 	}
 	for(size_t i = 0; i < clients.size(); i++){
-		if (clients[i].GetFd() == fd) {
+		if (clients[i].getFd() == fd) {
 			clients.erase(clients.begin() + i); break;
 		}
 	}
 }
 
-void Server::ReceiveNewData(int fd)
+std::vector<std::string> ft_split(const char* str, char delimiter) 
+{
+    std::vector<std::string> result;
+    char* copy = strdup(str);
+    char* token = strtok(copy, &delimiter);
+
+    while (token != NULL) {
+        result.push_back(std::string(token));
+        token = strtok(NULL, &delimiter);
+    }
+    free(copy);
+    return result;
+}
+
+void Server::ReceiveNewData(int i) 
 {
 	char buff[1024];
 	memset(buff, 0, sizeof(buff));
-	ssize_t bytes = recv(fd, buff, sizeof(buff) - 1 , 0);
+	ssize_t bytes = recv(fds[i].fd, buff, sizeof(buff) - 1 , 0);
 
 	if(bytes <= 0){
-		std::cout << RED << "Client <" << fd << "> Disconnected" << WHI << std::endl;
-		ClearClient(fd);
-		close(fd);
-	} else {
-		buff[bytes] = '\0';
-		std::cout << YEL << "Client <" << fd << "> Data: " << WHI << buff;
+		std::cout << RED << "Client <" << fds[i].fd << "> Disconnected" << WHI << std::endl;
+		ClearClient(fds[i].fd);
+		close(fds[i].fd);
+	} else 
+	{
+		if(bytes > 1) //pt salto de linea.
+		{
+			buff[bytes - 1] = '\0';
+			std::vector<std::string> parametros = ft_split(buff, 32);
+			if(clients[i - 1].getPasswd() == false)
+			{
+				if((parametros[0] == "PASS") && (parametros[1] == this->Passwd))
+				{
+					clients[i - 1].setPasswd(true);
+					return ;
+				}
+				else
+				{
+					std::cout << "Contrasena incompleted: " << buff << std::endl;
+					return ;
+				}
+			}
+			if(clients[i - 1].getNick().empty())
+			{
+				if((parametros.size() == 2) && (parametros[0] == "NICK"))
+				{
+					clients[i - 1].setNick(parametros[1]);
+					return ;
+				}
+				else
+				{
+					std::cout << "Nick incorrecto: " << buff << std::endl;
+					return ;
+				}
+				/*
+				- No puede comenzar con un dígito.
+				- Algunos caracteres como espacios, dos puntos (:), y el símbolo de coma (,) están prohibidos.
+				- La longitud máxima del apodo suele estar limitada a 9 caracteres en muchas implementaciones de IRC
+				*/
+			}
+			if(clients[i - 1].getUser().empty())
+			{
+				if((parametros.size() >= 5) && (parametros[0] == "USER"))
+				{
+					clients[i - 1].setUser(parametros[1]);
+					return ;
+				}
+				else
+				{
+					std::cout << "User incorrecto: " << buff << std::endl;
+					return ;
+				}
+				/*
+				- Algunos caracteres como espacios y dos puntos (:) están prohibidos.
+				*/
+			}
+			else
+				std::cout << YEL << "Client <" << fds[i].fd << "> Data: " << WHI << buff << std::endl;
+			//Debo hacer un parseo con split.
+			//if(Nickname)
+			//if(Username)
+		}
 	}
 }
 
-void Server::AcceptNewClient() //El uso del cliente no lo tengo muy claro aun, asi que esta inacabado.
+void Server::AcceptNewClient()
 {
 	Client cli;
 	struct sockaddr_in add;
@@ -103,7 +175,7 @@ void Server::AcceptNewClient() //El uso del cliente no lo tengo muy claro aun, a
 	NewPoll.events = POLLIN; //POLLIN: Monitorea si hay datos disponibles para leer en el descriptor.
 	NewPoll.revents = 0; //No hay evento previo.
 
-	cli.SetFd(incofd);
+	cli.setFd(incofd);
 	cli.setIp(inet_ntoa((add.sin_addr)));
 	clients.push_back(cli);
 	fds.push_back(NewPoll);
@@ -155,14 +227,16 @@ void Server::SocketInit()
 	if(setsockopt(this->SerSocketFd, SOL_SOCKET, SO_REUSEADDR, &en, sizeof(en)) == -1)
 		throw(std::runtime_error("faild to set option (SO_REUSEADDR) on socket"));
 	/*Establecer configuración.
+
 		- SOL_SOCKET: Opciones estándar, comunes para cualquier tipo de socket.
-		- SO_REUSEADDR: Permite reutilizar la dirección local. */
-	
+		- SO_REUSEADDR: Permite reutilizar la dirección local, suele haber un 
+		tiempo de espera entre ejecucion y ejecucion puesto que se debe liberar la dirrecion
+		pero al usar esta Flag nos libramos de esa espera. */
 	if (fcntl(this->SerSocketFd, F_SETFL, O_NONBLOCK) == -1) 
 		throw(std::runtime_error("faild to set option (O_NONBLOCK) on socket"));
 	/*Configuraciones en Fd: 
 		1. F__SETFL: Para Establecer Flags
-		2. O_NONBLOCK: Modo no bloqueante */
+		2. O_NONBLOCK: Modo no bloqueante, lo que pide el subject */
 	
 	if (bind(this->SerSocketFd, (struct sockaddr *)&add, sizeof(add)) == -1)
 		throw(std::runtime_error("faild to bind socket"));
@@ -170,7 +244,7 @@ void Server::SocketInit()
 
 	if (listen(this->SerSocketFd, SOMAXCONN) == -1) 
 		throw(std::runtime_error("listen() faild"));
-	//Socket en modo pasivo, aceptar conexiones.
+	//Socket en modo pasivo, listo para aceptar conexiones.
 
 	NewPoll.fd = this->SerSocketFd;
 	NewPoll.events = POLLIN; //POLLIN: Monitorea si hay datos disponibles para leer en el descriptor
@@ -180,21 +254,26 @@ void Server::SocketInit()
 
 void Server::ServerInit()
 {
-	this->Port = 4444;
 	SocketInit();
 	std::cout << GRE << "Server <" << WHI << this->SerSocketFd << GRE << "> Connected" << WHI << std::endl;
+	std::cout << "Port: " << this->Port << std::endl; 
+	std::cout << "Passwd: " << this->Passwd << std::endl;
 	std::cout << "Waiting to accept a connection...\n";
 	while (Server::Signal == false) 
 	{
 		if((poll(&fds[0],fds.size(),-1) == -1) && Server::Signal == false) //poll(); espera eventos de los sockets
 			throw(std::runtime_error("poll() faild"));
+		/* poll(); espera eventos de los sockets
+			- En este caso estamos pendintes del fds[0], el fd del server para 
+			estar pedientes de nuevas conexiones. */
 		for (size_t i = 0; i < fds.size(); i++)
 		{
-			if (fds[i].revents & POLLIN){
-				if (fds[i].fd == SerSocketFd)
+			if (fds[i].revents & POLLIN){  //checkeamos que tengamos eventos pendientes
+				if (fds[i].fd == SerSocketFd) //checkeamos si es el fd del server
 					AcceptNewClient();
-				else
-					ReceiveNewData(fds[i].fd);
+				else  //posible error, necesidad de control de errores para un segundo user.
+					ReceiveNewData(i);
+					//Client[i - 1], fds[i].fd
 			}
 		}
 	}

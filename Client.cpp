@@ -5,7 +5,7 @@ Client::~Client()
     //std::cout << "Client destructor called" << std::endl;
 }
 
-Client::Client()
+Client::Client(): Passwd(false)
 {
     //std::cout << "Client constructor called" << std::endl;
 }
@@ -24,17 +24,32 @@ Client::Client(const Client &cp)
 	*this = cp;
 }
 
-int Client::GetFd()
+bool Client::getPasswd()
+{
+	return Passwd;
+}
+
+int Client::getFd()
 {
 	return Fd;
 }
 
-std::string Client::GetIp()
+std::string Client::getIp()
 {
 	return Ip;
 }
 
-void Client::SetFd(int fd)
+std::string Client::getUser()
+{
+	return Username;
+}
+
+std::string Client::getNick()
+{
+	return Nickname;
+}
+
+void Client::setFd(int fd)
 {
 	this->Fd = fd;
 }
@@ -42,4 +57,19 @@ void Client::SetFd(int fd)
 void Client::setIp(std::string Ip)
 {
 	this->Ip = Ip;
+}
+
+void Client::setUser(std::string user)
+{
+	this->Username = user;
+}
+
+void Client::setNick(std::string nick)
+{
+	this->Nickname = nick;
+}
+
+void Client::setPasswd(bool passwd)
+{
+	this->Passwd = passwd;
 }

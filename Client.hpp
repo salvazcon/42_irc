@@ -11,6 +11,7 @@
 #include <arpa/inet.h>
 #include <poll.h>
 #include <csignal>
+#include <cstdlib>
 #include <cstring>
 //-------------------------------------------------------//
 #define RED "\e[1;31m" //-> for red color
@@ -24,17 +25,26 @@ class Client
     protected:
 
     private:
-        int Fd;
+        std::string Nickname;
+        std::string Username;
+        /*static*/ bool Passwd;
         std::string Ip;
+        int Fd;
 
     public:
         ~Client(void);
         Client(void);
         Client(const Client &cp);
         Client& operator=(const Client &other);
-        int GetFd(void);
-        std::string GetIp();
-        void SetFd(int fd);
+        int getFd();
+        bool getPasswd();
+        std::string getIp();
+        std::string getUser();
+        std::string getNick();
+        void setFd(int fd);
         void setIp(std::string ipadd);
+        void setUser(std::string user);
+        void setNick(std::string nick);
+        void setPasswd(bool passwd);
 };
 #endif
