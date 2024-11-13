@@ -82,6 +82,78 @@ std::vector<std::string> ft_split(const char* str, char delimiter)
     return result;
 }
 
+void Server::CmdPASS(int i, std::vector<std::string> parametros, char buff[1024])
+{
+	if (parametros.size() != 2)
+		std::cout << "Wrong parameters. " << buff << std::endl;
+	else if (clients[i - 1].getPasswd() == true)
+		std::cout << "Password alredy done. " << buff << std::endl;
+	else
+	{
+		if((parametros[1] == this->Passwd))
+		{
+			clients[i - 1].setPasswd(true);
+			std::cout << "Correct password. " << buff << std::endl;
+		}
+		else
+			std::cout << "Wrong password. " << buff << std::endl;
+	}
+}
+
+void Server::CmdNICK(int i, std::vector<std::string> parametros, char buff[1024])
+{
+	if(clients[i - 1].getPasswd() == false)
+		std::cout << "Empty Pass. " << buff << std::endl;
+	else if (parametros.size() != 2)
+		std::cout << "Wrong parameters. " << buff << std::endl;
+	else if((!isdigit(parametros[1][0])) && (parametros[1].find(":") == std::string::npos) \
+	&& (parametros[1].find(",") == std::string::npos) && parametros[1].size() <= 9)
+	{
+		clients[i - 1].setNick(parametros[1]);
+		std::cout << "Correct Nick. " << buff << std::endl;
+	}
+	else
+		std::cout << "Wrong Nick. " << buff << std::endl;
+}
+
+void Server::CmdUSER(int i, std::vector<std::string> parametros, char buff[1024])
+{
+	if(clients[i - 1].getPasswd() == false)
+		std::cout << "Empty Pass. " << buff << std::endl;
+	else if(clients[i - 1].getNick().empty())
+		std::cout << "Empty Nick. " << buff << std::endl;
+	else if (parametros.size() < 5)
+		std::cout << "Wrong parameters. " << buff << std::endl;
+	else if(!clients[i - 1].getUser().empty())
+		std::cout << "User alredy done. " << buff << std::endl;
+	/* else if((parametros[1].find(":") == std::string::npos) && 
+	(parametros[2].find(":") == std::string::npos)
+	(parametros[3].find(":") == std::string::npos)
+	(parametros[1].find(" ") == std::string::npos)
+	(parametros[2].find(" ") == std::string::npos)
+	(parametros[3].find(" ") == std::string::npos)
+	)
+	{
+		clients[i - 1].setUser(parametros[1]);
+		std::cout << "Correct User. " << buff << std::endl;
+	} */
+	else
+		std::cout << "Wrong User. " << buff << std::endl;
+}
+
+void Server::CmdPRIVMSG(int i, std::vector<std::string> parametros, char buff[1024])
+{
+	(void)parametros;
+	if(clients[i - 1].getPasswd() == false)
+		std::cout << "Empty Pass. " << buff << std::endl;
+	else if(clients[i - 1].getNick().empty())
+		std::cout << "Empty Nick. " << buff << std::endl;
+	else if(clients[i - 1].getUser().empty())
+		std::cout << "Empty User. " << buff << std::endl;
+	else
+		std::cout << YEL << "Client <" << fds[i].fd << "> Data: " << WHI << buff << std::endl;
+}
+
 void Server::ReceiveNewData(int i) 
 {
 	char buff[1024];
@@ -98,58 +170,16 @@ void Server::ReceiveNewData(int i)
 		{
 			buff[bytes - 1] = '\0';
 			std::vector<std::string> parametros = ft_split(buff, 32);
-			if(clients[i - 1].getPasswd() == false)
-			{
-				if((parametros[0] == "PASS") && (parametros[1] == this->Passwd))
-				{
-					clients[i - 1].setPasswd(true);
-					return ;
-				}
-				else
-				{
-					std::cout << "Contrasena incompleted: " << buff << std::endl;
-					return ;
-				}
-			}
-			if(clients[i - 1].getNick().empty())
-			{
-				if((parametros.size() == 2) && (parametros[0] == "NICK"))
-				{
-					clients[i - 1].setNick(parametros[1]);
-					return ;
-				}
-				else
-				{
-					std::cout << "Nick incorrecto: " << buff << std::endl;
-					return ;
-				}
-				/*
-				- No puede comenzar con un dígito.
-				- Algunos caracteres como espacios, dos puntos (:), y el símbolo de coma (,) están prohibidos.
-				- La longitud máxima del apodo suele estar limitada a 9 caracteres en muchas implementaciones de IRC
-				*/
-			}
-			if(clients[i - 1].getUser().empty())
-			{
-				if((parametros.size() >= 5) && (parametros[0] == "USER"))
-				{
-					clients[i - 1].setUser(parametros[1]);
-					return ;
-				}
-				else
-				{
-					std::cout << "User incorrecto: " << buff << std::endl;
-					return ;
-				}
-				/*
-				- Algunos caracteres como espacios y dos puntos (:) están prohibidos.
-				*/
-			}
+			if (parametros[0] == "PASS")
+				CmdPASS(i, parametros, buff);
+			else if (parametros[0] == "NICK")
+				CmdNICK(i, parametros, buff);
+			else if (parametros[0] == "USER")
+				CmdUSER(i, parametros, buff);
+			else if (parametros[0] == "PRIVMSG")
+				CmdPRIVMSG(i, parametros, buff);
 			else
-				std::cout << YEL << "Client <" << fds[i].fd << "> Data: " << WHI << buff << std::endl;
-			//Debo hacer un parseo con split.
-			//if(Nickname)
-			//if(Username)
+				std::cout << "Command not found. " << buff << std::endl;
 		}
 	}
 }

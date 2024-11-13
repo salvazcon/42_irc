@@ -39,13 +39,17 @@ class Server
         Server(int port, std::string passwd);
         Server(const Server &cp);
         Server& operator=(const Server &other);
-        void CloseFds(void);
-        void ServerInit(void);
-        void SocketInit(void);
+        void CloseFds();
+        void ServerInit();
+        void SocketInit();
+        void AcceptNewClient();
         void ClearClient(int fd);
-        void AcceptNewClient(void);
         void ReceiveNewData(int fd);
         static void SignalHandler(int signum);
+        void CmdUSER(int i, std::vector<std::string> parametros, char buff[1024]);
+        void CmdNICK(int i, std::vector<std::string> parametros, char buff[1024]);
+        void CmdPASS(int i, std::vector<std::string> parametros, char buff[1024]);
+        void CmdPRIVMSG(int i, std::vector<std::string> parametros, char buff[1024]);
 };
 
 #endif
