@@ -15,6 +15,7 @@
 #include <cstring>
 #include "Client.hpp"
 #include "ServSignal.hpp"
+#include "CmdHandler.hpp"
 
 //-------------------------------------------------------//
 #define RED "\e[1;31m" //-> for red color
@@ -29,6 +30,7 @@ class Server
 
     private:
         int Port;
+        CmdHandler Cmd;
         int SerSocketFd;
         ServSignal Signal;
         std::string Passwd;
@@ -47,11 +49,6 @@ class Server
         void AcceptNewClient();
         void ClearClient(int fd);
         void ReceiveNewData(size_t i);
-        static void SignalHandler(int signum);
-        void CmdUSER(size_t i, std::vector<std::string> parametros, char buff[1024]);
-        void CmdNICK(size_t i, std::vector<std::string> parametros, char buff[1024]);
-        void CmdPASS(size_t i, std::vector<std::string> parametros, char buff[1024]);
-        void CmdPRIVMSG(size_t i, std::vector<std::string> parametros, char buff[1024]);
 };
 
 #endif
