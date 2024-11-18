@@ -1,5 +1,5 @@
 NAME		= ircserv
-SRCS		= main.cpp Server.cpp Client.cpp
+SRCS		= main.cpp Server.cpp Client.cpp ServSignal.cpp
 OBJS		= ${SRCS:%.cpp=%.o}
 DEPS		= ${SRCS:.cpp=.d}
 CC			= c++

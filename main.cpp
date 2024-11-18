@@ -1,5 +1,6 @@
 #include "Client.hpp"
 #include "Server.hpp"
+#include "ServSignal.hpp"
 
 int main(int argv, char *argc[])
 {
@@ -8,11 +9,11 @@ int main(int argv, char *argc[])
         std::cerr << "Error: Invalid Arguments." << std::endl;
         return 1; 
     }
-	Server ser(atoi(argc[1]), argc[2]);
+	Server ser(atoi(argc[1]), argc[2]); //Control de errores puerto (MUST DO)
 	std::cout << "---- SERVER ----" << std::endl;
 	try {
-		signal(SIGINT, Server::SignalHandler);
-		signal(SIGQUIT, Server::SignalHandler);
+		signal(SIGINT, ServSignal::SignalHandler);
+		signal(SIGQUIT, ServSignal::SignalHandler);
 		ser.ServerInit();
 	} catch(const std::exception& e) {
 		ser.CloseFds();
@@ -44,7 +45,4 @@ int main(int argv, char *argc[])
 	JOIN #nuevo_canal
 		- si no esta creado se crea
 	PRIVMSG #nuevo_canal : hola grupo.
-		- envia mensajes.
-
-
-*/
+		- envia mensajes. */

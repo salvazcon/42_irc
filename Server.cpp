@@ -1,31 +1,30 @@
 #include "Server.hpp"
-#include "Client.hpp"
 
 Server::~Server()
 {
     //std::cout << "Server destructor called" << std::endl;
 }
 
-Server::Server(): SerSocketFd(-1)
+Server::Server() : Port(0), SerSocketFd(-1)
+{
+    //std::cout << "Server constructor called" << std::endl;
+    std::cout << "Default Server constructor called" << std::endl;
+}
+
+Server::Server(int port, std::string passwd) : Port(port), SerSocketFd(-1), Passwd(passwd)
 {
     //std::cout << "Server constructor called" << std::endl;
 }
 
-bool Server::Signal = false; //-> initialize the static boolean
-
-Server::Server(int port, std::string passwd)
-{
-    this->SerSocketFd = -1;
-	this->Port = port;
-	this->Passwd = passwd;
-	std::cout << "Server constructor called" << std::endl;
-}
-
 Server& Server::operator=(const Server &other)
 {
-    //(<-- Datos a copiar.)
-	(void)other;
 	//std::cout << "Server copy assignment operator called" << std::endl;
+	this->fds = other.fds;
+	this->Port = other.Port;
+	this->Signal = other.Signal;
+	this->Passwd = other.Passwd;
+	this->clients = other.clients;
+	this->SerSocketFd = other.SerSocketFd;
 	return *this;
 }
 
@@ -35,37 +34,134 @@ Server::Server(const Server &cp)
 	*this = cp;
 }
 
-void Server::SignalHandler(int signum)
-{
-	(void)signum;
-	std::cout << std::endl << "Signal Received!" << std::endl;
-	Server::Signal = true;
-}
-
 void Server::CloseFds()
 {
-	for(size_t i = 0; i < clients.size(); i++){
-		std::cout << RED << "Client <" << clients[i].getFd() << "> Disconnected" << WHI << std::endl;
-		close(clients[i].getFd());
-	}
-	if (SerSocketFd != -1){
-		std::cout << RED << "Server <" << SerSocketFd << "> Disconnected" << WHI << std::endl;
-		close(SerSocketFd);
-	}
+    for (size_t i = 0; i < clients.size(); i++) {
+        int clientFd = clients[i].getFd();
+        if (close(clientFd) == -1)
+            std::cerr << RED << "Error closing client descriptor <" << clientFd << ">: " << std::endl;
+        else
+            std::cout << RED << "Client <" << clientFd << "> Disconnected" << WHI << std::endl;
+    }
+    clients.clear();
+
+    if (SerSocketFd != -1) {
+        if (close(SerSocketFd) == -1)
+           std::cerr << RED << "Error closing server descriptor <" << SerSocketFd << ">: " << std::endl;
+        else
+            std::cout << RED << "Server <" << SerSocketFd << "> Disconnected" << WHI << std::endl;
+        SerSocketFd = -1;
+    }
+    fds.clear();
 }
 
 void Server::ClearClient(int fd)
 {
 	for(size_t i = 0; i < fds.size(); i++){
 		if (fds[i].fd == fd) {
-			fds.erase(fds.begin() + i); break;
+			fds.erase(fds.begin() + i); 
+			break;
 		}
 	}
 	for(size_t i = 0; i < clients.size(); i++){
 		if (clients[i].getFd() == fd) {
-			clients.erase(clients.begin() + i); break;
+			clients.erase(clients.begin() + i);
+			break;
 		}
 	}
+}
+
+void Server::CmdPASS(size_t i, std::vector<std::string> parametros, char buff[1024])
+{
+	if (parametros.size() != 2)
+		std::cout << "Wrong parameters. " << buff << std::endl;
+	else
+	{
+		if((parametros[1] == this->Passwd))
+		{
+			if (clients[i].getPasswd() == true)
+			{
+				std::cout << "Password alredy done. " << buff << std::endl;
+				return ;
+			}
+			clients[i].setPasswd(true);
+			std::cout << "Correct password. " << buff << std::endl;
+		}
+		else
+			std::cout << "Wrong password. " << buff << std::endl;
+	}
+}
+
+void Server::CmdNICK(size_t i, std::vector<std::string> parametros, char buff[1024])
+{
+	if(clients[i].getPasswd() == false)
+		std::cout << "Empty Pass. " << buff << std::endl;
+	else if (parametros.size() != 2)
+		std::cout << "Wrong parameters. " << buff << std::endl;
+	else if((!isdigit(parametros[1][0])) && \
+	(parametros[1].find(":") == std::string::npos) && \
+	(parametros[1].find(",") == std::string::npos) && \
+	(parametros[1].size() <= 9))
+	{
+		for (size_t j = 0; j < clients.size(); j++) {
+            if (j != i && parametros[1] == clients[j].getNick()) {
+                std::cout << "Nick is already in use. " << buff << std::endl;
+                return;
+            }
+        }
+		clients[i].setNick(parametros[1]);
+		std::cout << "Correct Nick. " << buff << std::endl;
+	}
+	else
+		std::cout << "Wrong Nick. " << buff << std::endl;
+}
+
+void Server::CmdUSER(size_t i, std::vector<std::string> parametros, char buff[1024])
+{
+	if(clients[i].getPasswd() == false)
+		std::cout << "Empty Pass. " << buff << std::endl;
+	else if(clients[i].getNick().empty())
+		std::cout << "Empty Nick. " << buff << std::endl;
+	else if (parametros.size() < 5)
+		std::cout << "Wrong parameters. " << buff << std::endl;
+	else if((parametros[1].find(":") == std::string::npos) && \
+	(parametros[2].find_first_not_of("0123456789") == std::string::npos) && \
+	(parametros[3].find(":") == std::string::npos))
+	{
+		std::string str(buff);
+		size_t i = str.find(":");
+		if (i != std::string::npos) 
+		{
+			if(!clients[i].getUser().empty())
+			{	
+				std::cout << "User alredy done. " << buff << std::endl;
+				return ;
+			}
+			std::string temp = str.substr(i + 1);
+			if (!temp.empty())
+				clients[i].setRealN(temp);
+			clients[i].setUser(parametros[1]);
+			clients[i].setUserM(atoi(parametros[2].c_str()));
+			std::cout << "Correct User. " << buff << std::endl;
+		} 
+		else
+			std::cout << "No ':' found in buffer. " << buff << std::endl;
+	}
+	else
+		std::cout << "Wrong User. " << buff << std::endl;
+}
+
+void Server::CmdPRIVMSG(size_t i, std::vector<std::string> parametros, char buff[1024])
+{
+	(void)parametros;
+	if(clients[i].getPasswd() == false)
+		std::cout << "Empty Pass. " << buff << std::endl;
+	else if(clients[i].getNick().empty())
+		std::cout << "Empty Nick. " << buff << std::endl;
+	else if(clients[i].getUser().empty())
+		std::cout << "Empty User. " << buff << std::endl;
+	else
+		std::cout << YEL << "Client <" << fds[i].fd << "> Data: " << WHI << buff << std::endl;
 }
 
 std::vector<std::string> ft_split(const char* str, char delimiter) 
@@ -74,7 +170,8 @@ std::vector<std::string> ft_split(const char* str, char delimiter)
     char* copy = strdup(str);
     char* token = strtok(copy, &delimiter);
 
-    while (token != NULL) {
+    while (token != NULL)
+	{
         result.push_back(std::string(token));
         token = strtok(NULL, &delimiter);
     }
@@ -82,90 +179,17 @@ std::vector<std::string> ft_split(const char* str, char delimiter)
     return result;
 }
 
-void Server::CmdPASS(int i, std::vector<std::string> parametros, char buff[1024])
-{
-	if (parametros.size() != 2)
-		std::cout << "Wrong parameters. " << buff << std::endl;
-	else if (clients[i - 1].getPasswd() == true)
-		std::cout << "Password alredy done. " << buff << std::endl;
-	else
-	{
-		if((parametros[1] == this->Passwd))
-		{
-			clients[i - 1].setPasswd(true);
-			std::cout << "Correct password. " << buff << std::endl;
-		}
-		else
-			std::cout << "Wrong password. " << buff << std::endl;
-	}
-}
-
-void Server::CmdNICK(int i, std::vector<std::string> parametros, char buff[1024])
-{
-	if(clients[i - 1].getPasswd() == false)
-		std::cout << "Empty Pass. " << buff << std::endl;
-	else if (parametros.size() != 2)
-		std::cout << "Wrong parameters. " << buff << std::endl;
-	else if((!isdigit(parametros[1][0])) && (parametros[1].find(":") == std::string::npos) \
-	&& (parametros[1].find(",") == std::string::npos) && parametros[1].size() <= 9)
-	{
-		clients[i - 1].setNick(parametros[1]);
-		std::cout << "Correct Nick. " << buff << std::endl;
-	}
-	else
-		std::cout << "Wrong Nick. " << buff << std::endl;
-}
-
-void Server::CmdUSER(int i, std::vector<std::string> parametros, char buff[1024])
-{
-	if(clients[i - 1].getPasswd() == false)
-		std::cout << "Empty Pass. " << buff << std::endl;
-	else if(clients[i - 1].getNick().empty())
-		std::cout << "Empty Nick. " << buff << std::endl;
-	else if (parametros.size() < 5)
-		std::cout << "Wrong parameters. " << buff << std::endl;
-	else if(!clients[i - 1].getUser().empty())
-		std::cout << "User alredy done. " << buff << std::endl;
-	/* else if((parametros[1].find(":") == std::string::npos) && 
-	(parametros[2].find(":") == std::string::npos)
-	(parametros[3].find(":") == std::string::npos)
-	(parametros[1].find(" ") == std::string::npos)
-	(parametros[2].find(" ") == std::string::npos)
-	(parametros[3].find(" ") == std::string::npos)
-	)
-	{
-		clients[i - 1].setUser(parametros[1]);
-		std::cout << "Correct User. " << buff << std::endl;
-	} */
-	else
-		std::cout << "Wrong User. " << buff << std::endl;
-}
-
-void Server::CmdPRIVMSG(int i, std::vector<std::string> parametros, char buff[1024])
-{
-	(void)parametros;
-	if(clients[i - 1].getPasswd() == false)
-		std::cout << "Empty Pass. " << buff << std::endl;
-	else if(clients[i - 1].getNick().empty())
-		std::cout << "Empty Nick. " << buff << std::endl;
-	else if(clients[i - 1].getUser().empty())
-		std::cout << "Empty User. " << buff << std::endl;
-	else
-		std::cout << YEL << "Client <" << fds[i].fd << "> Data: " << WHI << buff << std::endl;
-}
-
-void Server::ReceiveNewData(int i) 
+void Server::ReceiveNewData(size_t i) 
 {
 	char buff[1024];
 	memset(buff, 0, sizeof(buff));
 	ssize_t bytes = recv(fds[i].fd, buff, sizeof(buff) - 1 , 0);
 
-	if(bytes <= 0){
+	if(bytes <= 0) {
 		std::cout << RED << "Client <" << fds[i].fd << "> Disconnected" << WHI << std::endl;
 		ClearClient(fds[i].fd);
 		close(fds[i].fd);
-	} else 
-	{
+	} else {
 		if(bytes > 1) //pt salto de linea.
 		{
 			buff[bytes - 1] = '\0';
@@ -241,6 +265,7 @@ struct pollfd;
 void Server::SocketInit()
 {
 	int en = 1;
+	Client aux;  //nodo vacio para dejar el codigo mas limpio y manejable.
 	struct sockaddr_in add;
 	struct pollfd NewPoll;
 
@@ -257,11 +282,11 @@ void Server::SocketInit()
 	if(setsockopt(this->SerSocketFd, SOL_SOCKET, SO_REUSEADDR, &en, sizeof(en)) == -1)
 		throw(std::runtime_error("faild to set option (SO_REUSEADDR) on socket"));
 	/*Establecer configuración.
-
 		- SOL_SOCKET: Opciones estándar, comunes para cualquier tipo de socket.
 		- SO_REUSEADDR: Permite reutilizar la dirección local, suele haber un 
 		tiempo de espera entre ejecucion y ejecucion puesto que se debe liberar la dirrecion
 		pero al usar esta Flag nos libramos de esa espera. */
+		
 	if (fcntl(this->SerSocketFd, F_SETFL, O_NONBLOCK) == -1) 
 		throw(std::runtime_error("faild to set option (O_NONBLOCK) on socket"));
 	/*Configuraciones en Fd: 
@@ -280,6 +305,7 @@ void Server::SocketInit()
 	NewPoll.events = POLLIN; //POLLIN: Monitorea si hay datos disponibles para leer en el descriptor
 	NewPoll.revents = 0; //No hay evento previo.
 	fds.push_back(NewPoll);
+	clients.push_back(aux);
 }
 
 void Server::ServerInit()
@@ -289,9 +315,9 @@ void Server::ServerInit()
 	std::cout << "Port: " << this->Port << std::endl; 
 	std::cout << "Passwd: " << this->Passwd << std::endl;
 	std::cout << "Waiting to accept a connection...\n";
-	while (Server::Signal == false) 
+	while (Server::Signal.getSignal() == false) 
 	{
-		if((poll(&fds[0],fds.size(),-1) == -1) && Server::Signal == false) //poll(); espera eventos de los sockets
+		if((poll(&fds[0],fds.size(),-1) == -1) && Server::Signal.getSignal() == false) //poll(); espera eventos de los sockets
 			throw(std::runtime_error("poll() faild"));
 		/* poll(); espera eventos de los sockets
 			- En este caso estamos pendintes del fds[0], el fd del server para 
@@ -303,7 +329,6 @@ void Server::ServerInit()
 					AcceptNewClient();
 				else  //posible error, necesidad de control de errores para un segundo user.
 					ReceiveNewData(i);
-					//Client[i - 1], fds[i].fd
 			}
 		}
 	}

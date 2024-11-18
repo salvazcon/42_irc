@@ -13,6 +13,7 @@
 #include <csignal>
 #include <cstdlib>
 #include <cstring>
+
 //-------------------------------------------------------//
 #define RED "\e[1;31m" //-> for red color
 #define WHI "\e[0;37m" //-> for white color
@@ -25,10 +26,12 @@ class Client
     protected:
 
     private:
+        /*static*/ bool Passwd;
         std::string Nickname;
         std::string Username;
-        /*static*/ bool Passwd;
+        std::string Realname;
         std::string Ip;
+        int Usermode;
         int Fd;
 
     public:
@@ -37,7 +40,9 @@ class Client
         Client(const Client &cp);
         Client& operator=(const Client &other);
         int getFd();
+        int getUserM();
         bool getPasswd();
+        std::string getRealN();
         std::string getIp();
         std::string getUser();
         std::string getNick();
@@ -45,6 +50,8 @@ class Client
         void setIp(std::string ipadd);
         void setUser(std::string user);
         void setNick(std::string nick);
+        void setRealN(std::string real);
         void setPasswd(bool passwd);
+        void setUserM(int n);
 };
 #endif

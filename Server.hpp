@@ -14,6 +14,8 @@
 #include <cstdlib>
 #include <cstring>
 #include "Client.hpp"
+#include "ServSignal.hpp"
+
 //-------------------------------------------------------//
 #define RED "\e[1;31m" //-> for red color
 #define WHI "\e[0;37m" //-> for white color
@@ -28,7 +30,7 @@ class Server
     private:
         int Port;
         int SerSocketFd;
-        static bool Signal;
+        ServSignal Signal;
         std::string Passwd;
         std::vector<Client> clients;
         std::vector<struct pollfd> fds;
@@ -44,12 +46,12 @@ class Server
         void SocketInit();
         void AcceptNewClient();
         void ClearClient(int fd);
-        void ReceiveNewData(int fd);
+        void ReceiveNewData(size_t i);
         static void SignalHandler(int signum);
-        void CmdUSER(int i, std::vector<std::string> parametros, char buff[1024]);
-        void CmdNICK(int i, std::vector<std::string> parametros, char buff[1024]);
-        void CmdPASS(int i, std::vector<std::string> parametros, char buff[1024]);
-        void CmdPRIVMSG(int i, std::vector<std::string> parametros, char buff[1024]);
+        void CmdUSER(size_t i, std::vector<std::string> parametros, char buff[1024]);
+        void CmdNICK(size_t i, std::vector<std::string> parametros, char buff[1024]);
+        void CmdPASS(size_t i, std::vector<std::string> parametros, char buff[1024]);
+        void CmdPRIVMSG(size_t i, std::vector<std::string> parametros, char buff[1024]);
 };
 
 #endif
