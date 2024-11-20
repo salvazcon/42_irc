@@ -1,6 +1,6 @@
 #include "Client.hpp"
 #include "Server.hpp"
-#include "ServSignal.hpp"
+#include "Signal.hpp"
 
 int main(int argv, char *argc[])
 {
@@ -12,8 +12,8 @@ int main(int argv, char *argc[])
 	Server ser(atoi(argc[1]), argc[2]); //Control de errores puerto (MUST DO)
 	std::cout << "---- SERVER ----" << std::endl;
 	try {
-		signal(SIGINT, ServSignal::SignalHandler);
-		signal(SIGQUIT, ServSignal::SignalHandler);
+		signal(SIGINT, Signal::SignalHandler);
+		signal(SIGQUIT, Signal::SignalHandler);
 		ser.ServerInit();
 	} catch(const std::exception& e) {
 		ser.CloseFds();

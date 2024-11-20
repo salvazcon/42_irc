@@ -1,29 +1,6 @@
 #include "CmdHandler.hpp"
 
-CmdHandler::~CmdHandler()
-{
-    //std::cout << "CmdHandler destructor called" << std::endl;
-}
-
-CmdHandler::CmdHandler()
-{
-    //std::cout << "CmdHandler constructor called" << std::endl;
-}
-
-CmdHandler& CmdHandler::operator=(const CmdHandler &other)
-{
-	//std::cout << "CmdHandler copy assignment operator called" << std::endl;
-    (void)other;
-	return *this;
-}
-
-CmdHandler::CmdHandler(const CmdHandler &cp)
-{
-	//std::cout << "CmdHandler copy constructor called" << std::endl;
-	*this = cp;
-}
-
-void CmdHandler::CmdPASS(std::vector<Client>& clients, std::string Passwd, size_t i, std::vector<std::string> parametros, char buff[1024])
+void CmdPASS(std::vector<Client>& clients, std::string Passwd, size_t i, std::vector<std::string> parametros, char buff[1024])
 {
 	if (parametros.size() != 2)
 		std::cout << "Wrong parameters. " << buff << std::endl;
@@ -44,7 +21,7 @@ void CmdHandler::CmdPASS(std::vector<Client>& clients, std::string Passwd, size_
 	}
 }
 
-void CmdHandler::CmdNICK(std::vector<Client>& clients, size_t i, std::vector<std::string> parametros, char buff[1024])
+void CmdNICK(std::vector<Client>& clients, size_t i, std::vector<std::string> parametros, char buff[1024])
 {
 	if(clients[i].getPasswd() == false)
 		std::cout << "Empty Pass. " << buff << std::endl;
@@ -68,7 +45,7 @@ void CmdHandler::CmdNICK(std::vector<Client>& clients, size_t i, std::vector<std
 		std::cout << "Wrong Nick. " << buff << std::endl;
 }
 
-void CmdHandler::CmdUSER(std::vector<Client>& clients, size_t i, std::vector<std::string> parametros, char buff[1024])
+void CmdUSER(std::vector<Client>& clients, size_t i, std::vector<std::string> parametros, char buff[1024])
 {
 	if(clients[i].getPasswd() == false)
 		std::cout << "Empty Pass. " << buff << std::endl;
@@ -81,21 +58,19 @@ void CmdHandler::CmdUSER(std::vector<Client>& clients, size_t i, std::vector<std
 	(parametros[3].find(":") == std::string::npos))
 	{
 		std::string str(buff);
-		size_t i = str.find(":");
-		if (i != std::string::npos) 
+		size_t j = str.find(":");
+		if (j != std::string::npos) 
 		{
-			if(!clients[i].getUser().empty())
+			if(!clients[i].getUser()->getUserName().empty())
 			{	
 				std::cout << "User alredy done. " << buff << std::endl;
 				return ;
 			}
-			std::string temp = str.substr(i + 1);
-			if (!temp.empty())
-				clients[i].setRealN(temp);
-			clients[i].setUser(parametros[1]);
-			clients[i].setUserM(atoi(parametros[2].c_str()));
+			std::string temp = ft_normalize_spaces(str.substr(j + 1));
+			User user(parametros[1], temp, atoi(parametros[2].c_str()));
+			clients[i].setUser(user);
 			std::cout << "Correct User. " << buff << std::endl;
-		} 
+		}
 		else
 			std::cout << "No ':' found in buffer. " << buff << std::endl;
 	}
@@ -103,15 +78,65 @@ void CmdHandler::CmdUSER(std::vector<Client>& clients, size_t i, std::vector<std
 		std::cout << "Wrong User. " << buff << std::endl;
 }
 
-void CmdHandler::CmdPRIVMSG(std::vector<Client>& clients, size_t i, std::vector<std::string> parametros, char buff[1024])
+void CmdJOIN(std::vector<Client>& clients, size_t i, std::vector<std::string> parametros, char buff[1024])
+{   
+    if(clients[i].getPasswd() == false)
+		std::cout << "Empty Pass. " << buff << std::endl;
+	else if(clients[i].getNick().empty())
+		std::cout << "Empty Nick. " << buff << std::endl;
+	else if(clients[i].getUser()->getUserName().empty())
+		std::cout << "Empty User. " << buff << std::endl;
+    else if (parametros.size() < 2 && parametros.size() > 3)
+		std::cout << "Wrong parameters. " << buff << std::endl;
+    std::vector<std::string> chanels = ft_split(parametros[1].c_str(), ',');
+    if(parametros.size() > 2)
+        std::vector<std::string> passwds = ft_split(parametros[2].c_str(), ',');
+    /* for(size_t i = 0; i < chanels.size(); i++)
+    {
+        if (chanels[0] != "&" && parametros[0] != "#")
+        {
+            std::cout << "Invalid channel. " << buff << std::endl;
+            return ;
+        }
+		for (size_t j = 0; j < clients.size(); j++)
+		{
+			for (size_t k = 0; j < clients[i].getChannels().size(); k++)
+			{
+				if (k != j && parametros[1] == clients[i].getChannel(k)->getName()) {
+					std::cout << "Channel is already in use. " << buff << std::endl;
+					// se unira al canal, si tiene le passwd.
+					return;
+				}
+				else
+					std::cout << "New Channel created. " << buff << std::endl;	
+					//crearar el channel nuevo.
+        	}
+		}
+		//Falta por parsear si hay que evitra algun caracter especial.
+		//  Interaccion con canales:
+			//- Busca si existe el canal.
+			//- Si no existe lo crea, en caso contrario se une.
+
+    } */
+}
+
+void CmdPRIVMSG(std::vector<Client>& clients, size_t i, std::vector<std::string> parametros, char buff[1024])
 {
 	(void)parametros;
 	if(clients[i].getPasswd() == false)
 		std::cout << "Empty Pass. " << buff << std::endl;
 	else if(clients[i].getNick().empty())
 		std::cout << "Empty Nick. " << buff << std::endl;
-	else if(clients[i].getUser().empty())
+	else if(clients[i].getUser()->getUserName().empty())
 		std::cout << "Empty User. " << buff << std::endl;
 	else
-		std::cout << YEL << "Client Data: " << WHI << buff << std::endl;
+	{
+		//std::cout << YEL << "Client Data: " << WHI << buff << std::endl;
+		std::cout << "PASS: " << clients[i].getPasswd() << "." << std::endl;
+		std::cout << "NICK: " << clients[i].getNick() << "." << std::endl;
+		std::cout << "USER: " << std::endl;
+		std::cout << "- username: " << clients[i].getUser()->getUserName() << "." << std::endl;
+		std::cout << "- realname: " << clients[i].getUser()->getRealName() << "." << std::endl;
+		std::cout << "- usermode: " << clients[i].getUser()->getUserMode() << "." << std::endl;
+	}
 }

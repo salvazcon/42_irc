@@ -5,7 +5,7 @@ Client::~Client()
     //std::cout << "Client destructor called" << std::endl;
 }
 
-Client::Client() : Passwd(false), Nickname(""), Username(""), Realname(""), Ip(""), Usermode(0), Fd(-1)
+Client::Client() : passwd(false), user(), nick(""), /* channels(), */ ip(""), fd(-1)
 {
     //std::cout << "Client constructor called" << std::endl;
 }
@@ -13,13 +13,12 @@ Client::Client() : Passwd(false), Nickname(""), Username(""), Realname(""), Ip("
 Client& Client::operator=(const Client &other)
 {
 	//std::cout << "Client copy assignment operator called" << std::endl;
-    this->Fd = other.Fd;
-	this->Ip = other.Ip;
-	this->Username = other.Username;
-	this->Nickname = other.Nickname;
-	this->Realname = other.Realname;
-	this->Usermode = other.Usermode;
-	this->Passwd = other.Passwd;
+    this->fd = other.fd;
+	this->ip = other.ip;
+	this->passwd = other.passwd;
+	this->nick = other.nick;
+	this->user = other.user;
+	//this->channels = other.channels;
 	return *this;
 }
 
@@ -31,70 +30,68 @@ Client::Client(const Client &cp)
 
 int Client::getFd()
 {
-	return Fd;
-}
-
-int Client::getUserM()
-{
-	return Usermode;
+	return fd;
 }
 
 bool Client::getPasswd()
 {
-	return Passwd;
+	return passwd;
 }
 
 std::string Client::getIp()
 {
-	return Ip;
-}
-
-std::string Client::getUser()
-{
-	return Username;
+	return ip;
 }
 
 std::string Client::getNick()
 {
-	return Nickname;
+	return nick;
 }
 
-std::string Client::getRealN()
+User* Client::getUser()
 {
-	return Realname;
+	return &user;
 }
+
+/* Channel* Client::getChannel(size_t i)
+{
+	if(channels.size() > i)
+		return &channels[i];
+	else
+		return NULL;
+}
+
+std::vector<Channel> Client::getChannels()
+{
+	return channels;
+} */
 
 void Client::setFd(int fd)
 {
-	this->Fd = fd;
+	this->fd = fd;
 }
 
 void Client::setIp(std::string Ip)
 {
-	this->Ip = Ip;
-}
-
-void Client::setUser(std::string user)
-{
-	this->Username = user;
-}
-
-void Client::setRealN(std::string real)
-{
-	this->Realname = real;
-}
-
-void Client::setUserM(int n)
-{
-	this->Usermode = n;
-}
-
-void Client::setNick(std::string nick)
-{
-	this->Nickname = nick;
+	this->ip = Ip;
 }
 
 void Client::setPasswd(bool passwd)
 {
-	this->Passwd = passwd;
+	this->passwd = passwd;
 }
+
+void Client::setNick(std::string nick)
+{
+	this->nick = nick;
+}
+
+void Client::setUser(User& user)
+{
+	this->user = user;
+}
+
+/* void Client::setChannel()
+{
+
+} */

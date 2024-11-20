@@ -13,23 +13,15 @@
 #include <csignal>
 #include <cstdlib>
 #include <cstring>
+
 #include "Client.hpp"
+#include "Channel.hpp"
+#include "Utils.hpp"
 
-class CmdHandler
-{
-    protected:
-
-    private:
-    
-    public:
-        ~CmdHandler(void);
-        CmdHandler(void);
-        CmdHandler(const CmdHandler &cp);
-		CmdHandler& operator=(const CmdHandler &other);
-        void CmdPASS(std::vector<Client>& clients, std::string Passwd, size_t i, std::vector<std::string> parametros, char buff[1024]);
-        void CmdNICK(std::vector<Client>& clients, size_t i, std::vector<std::string> parametros, char buff[1024]);
-        void CmdUSER(std::vector<Client>& clients, size_t i, std::vector<std::string> parametros, char buff[1024]);
-        void CmdPRIVMSG(std::vector<Client>& clients, size_t i, std::vector<std::string> parametros, char buff[1024]);
-};
+    void CmdPASS(std::vector<Client>& clients, std::string Passwd, size_t i, std::vector<std::string> parametros, char buff[1024]);
+    void CmdNICK(std::vector<Client>& clients, size_t i, std::vector<std::string> parametros, char buff[1024]);
+    void CmdUSER(std::vector<Client>& clients, size_t i, std::vector<std::string> parametros, char buff[1024]);
+    void CmdJOIN(std::vector<Client>& clients, size_t i, std::vector<std::string> parametros, char buff[1024]);
+    void CmdPRIVMSG(std::vector<Client>& clients, size_t i, std::vector<std::string> parametros, char buff[1024]);
 
 #endif

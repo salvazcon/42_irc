@@ -13,9 +13,11 @@
 #include <csignal>
 #include <cstdlib>
 #include <cstring>
+
+#include "Signal.hpp"
 #include "Client.hpp"
-#include "ServSignal.hpp"
 #include "CmdHandler.hpp"
+#include "Utils.hpp"
 
 //-------------------------------------------------------//
 #define RED "\e[1;31m" //-> for red color
@@ -29,11 +31,10 @@ class Server
     protected:
 
     private:
-        int Port;
-        CmdHandler Cmd;
-        int SerSocketFd;
-        ServSignal Signal;
-        std::string Passwd;
+        int port;
+        Signal signal;
+        int serSocketFd;
+        std::string passwd;
         std::vector<Client> clients;
         std::vector<struct pollfd> fds;
 
