@@ -27,10 +27,14 @@ class Channel
     public:
         ~Channel(void);
         Channel(void);
+        Channel(std::string name);
         Channel(const Channel &cp);
 		Channel& operator=(const Channel &other);
         std::string getName();
         std::string getPasswd();
+        std::string getUser(size_t i);
+        std::vector<std::string>& getUsers();
+        void setUser(std::string user);
         void setName(std::string name);
         void setPasswd(std::string passwd);
 };

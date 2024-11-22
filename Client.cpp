@@ -3,26 +3,68 @@
 Client::~Client()
 {
     //std::cout << "Client destructor called" << std::endl;
+	//Mala gestion de memoria, tal vez... ?
+	for (size_t i = 0; i < this->channels.size();)
+	{
+		//std::cout << this->channels[i]->getName() << " user size: " << this->channels[i]->getUsers().size() << std::endl;
+		if(this->channels[i]->getUsers().size() == 1) //algo pasa con la leng de los usuarios.
+		{
+			//std::cout << "channel eliminado " << this->channels[i]->getName() << std::endl;
+			delete channels[i];
+			channels.erase(this->channels.begin() + i);
+		}
+		else
+		{
+			for (size_t j = 0; j < this->channels[i]->getUsers().size(); j++)
+			{
+				if(this->nick == this->channels[i]->getUser(j))
+				{
+					//std::cout << "usuario eliminado " << this->channels[i]->getUser(j)<< std::endl;
+					this->channels[i]->getUsers().erase(this->channels[i]->getUsers().begin() + j);
+					break ;
+				}
+			}
+			++i;
+		}
+	}
+	channels.clear(); 
 }
 
-Client::Client() : passwd(false), user(), nick(""), /* channels(), */ ip(""), fd(-1)
+Client::Client() : passwd(false), user(), nick(""), channels(), ip(""), fd(-1)
 {
     //std::cout << "Client constructor called" << std::endl;
 }
 
-Client& Client::operator=(const Client &other)
+Client& Client::operator=(const Client& other)
 {
-	//std::cout << "Client copy assignment operator called" << std::endl;
-    this->fd = other.fd;
-	this->ip = other.ip;
-	this->passwd = other.passwd;
-	this->nick = other.nick;
-	this->user = other.user;
-	//this->channels = other.channels;
-	return *this;
+    if (this != &other) {
+        for (size_t i = 0; i < channels.size(); ++i) {
+            delete channels[i];
+        }
+        channels.clear();
+        std::vector<Channel*> tempChannels;
+        for (size_t i = 0; i < other.channels.size(); ++i) {
+            Channel* newChannel = new Channel(*other.channels[i]);
+            if (!newChannel) {
+                for (size_t j = 0; j < tempChannels.size(); ++j) {
+                    delete tempChannels[j];
+                }
+                tempChannels.clear();
+                return *this;
+            }
+            tempChannels.push_back(newChannel);
+        }
+        this->fd = other.fd;
+        this->ip = other.ip;
+        this->passwd = other.passwd;
+        this->nick = other.nick;
+        this->user = other.user;
+        channels.swap(tempChannels);
+    }
+    return *this;
 }
 
-Client::Client(const Client &cp)
+Client::Client(const Client &cp): channels()
 {
 	//std::cout << "Client copy constructor called" << std::endl;
 	*this = cp;
@@ -53,18 +95,17 @@ User* Client::getUser()
 	return &user;
 }
 
-/* Channel* Client::getChannel(size_t i)
+Channel* Client::getChannel(size_t i)
 {
 	if(channels.size() > i)
-		return &channels[i];
-	else
-		return NULL;
+		return channels[i];
+	return NULL;
 }
 
-std::vector<Channel> Client::getChannels()
+std::vector<Channel*> Client::getChannels()
 {
 	return channels;
-} */
+}
 
 void Client::setFd(int fd)
 {
@@ -91,7 +132,8 @@ void Client::setUser(User& user)
 	this->user = user;
 }
 
-/* void Client::setChannel()
+void Client::setChannel(Channel* channel)
 {
-
-} */
+	if (channel != NULL)
+        this->channels.push_back(channel);
+}

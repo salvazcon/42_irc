@@ -21,28 +21,3 @@ int main(int argv, char *argc[])
 	}
 	std::cout << "The Server Closed!" << std::endl;
 }
-
-/*Para usar el chat IRC debes:
-
-1. ejecutar el programa en un terminal: "./ircserv 4444 mypassword"
-
-2. abrir un segundo terminal y ejecutar : "nc localhost 4444"
-	- Esto abrirá una conexión TCP al puerto 4444 en tu servidor local.
-	Desde aquí puedes enviar mensajes que el servidor recibirá e imprimirá
-	en la consola. 
-	
-3. Una vez dentro inicia el usurio:
-	PASS "contrasena"
-	NICK nickname
-	USER username 0 * :realname
-		- username: Nombre de usuario que identifica al cliente en el servidor IRC.
-		- hostname (aquí es 0)
-		- servername (aquí es *)
-		- realname: Es solo informativo del usuarios.
-
-			<-- Lo de abajo no esta implentado todavia. -->
-			
-	JOIN #nuevo_canal
-		- si no esta creado se crea
-	PRIVMSG #nuevo_canal : hola grupo.
-		- envia mensajes. */

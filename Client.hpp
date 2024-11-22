@@ -32,7 +32,7 @@ class Client
         bool                    passwd;
         User                    user;
         std::string             nick;
-        /* std::vector<Channel>    channels; */
+        std::vector<Channel*>    channels;
         std::string ip;
         int fd;
 
@@ -47,11 +47,13 @@ class Client
         std::string getNick();
         User* getUser();
         Channel* getChannel(size_t i);
-        std::vector<Channel> getChannels();
+        std::vector<Channel*> getChannels();
         void setFd(int fd);
         void setIp(std::string ipadd);
         void setPasswd(bool passwd);
         void setNick(std::string nick);
         void setUser(User& user);
+        void setPasswd(std::string passwd);
+        void setChannel(Channel* channel);
 };
 #endif

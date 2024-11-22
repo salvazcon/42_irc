@@ -70,6 +70,7 @@ void Server::ClearClient(int fd)
 	}
 }
 
+//Debemos limpiar el uso de Objectos por parte del sever?? clients(sets gets) fds(sets gets)
 void Server::ReceiveNewData(size_t i) 
 {
 	char buff[1024];
@@ -111,92 +112,43 @@ void Server::AcceptNewClient()
 	int incofd = accept(serSocketFd, (sockaddr *)&(add), &len);
 	if (incofd == -1)
 		{std::cout << "accept() failed" << std::endl; return;}
-	//Conectarse al servidor
 	if (fcntl(incofd, F_SETFL, O_NONBLOCK) == -1) 
 		{std::cout << "fcntl() failed" << std::endl; return;}
-	/*Configuraciones en Fd: 
-		1. F__SETFL: Para Establecer Flags
-		2. O_NONBLOCK: Modo no bloqueante */
-
 	newPoll.fd = incofd;
-	newPoll.events = POLLIN; //POLLIN: Monitorea si hay datos disponibles para leer en el descriptor.
-	newPoll.revents = 0; //No hay evento previo.
-
+	newPoll.events = POLLIN;
+	newPoll.revents = 0;
 	cli.setFd(incofd);
 	cli.setIp(inet_ntoa((add.sin_addr)));
 	clients.push_back(cli);
 	fds.push_back(newPoll);
-
 	std::cout << GRE << "Client <" << incofd << "> Connected" << WHI << std::endl;
 }
-
-/* Chuleta de Structs de Red: 
-
-struct sockaddr_in {
-	sa_family_t    sin_family;   
-		// Familia de direcciones. (IPv4)
-	in_port_t      sin_port;     
-		// Puerto, almacenado bytes de red (htons).
-	struct in_addr sin_addr;     
-		// Otro struct: in_addr
-	char	sin_zero[8];  
-		// - (no se usa) }; 
-
-struct in_addr {
-		in_addr_t s_addr;
-		// Dirección IP en formato binario.
-	};
-
-struct pollfd;
-	  int   fd;        
-	  // socket a monitorear.
-	  short events;     
-	  // Eventos que monitoreamos.
-	  short revents;
-	  // Eventos que ocurrieron. */
 
 void Server::SocketInit()
 {
 	int en = 1;
-	Client aux;  //nodo vacio para dejar el codigo mas limpio y manejable.
+	Client aux; //nodo vacio
 	struct sockaddr_in add;
 	struct pollfd newPoll;
 
-	add.sin_family = AF_INET;  //IPv4
-	add.sin_addr.s_addr = INADDR_ANY;  //Todas las interfaces.
+	add.sin_family = AF_INET;
+	add.sin_addr.s_addr = INADDR_ANY;
 	add.sin_port = htons(this->port);
 
 	this->serSocketFd = socket(AF_INET, SOCK_STREAM, 0);
 	if(this->serSocketFd == -1)
 		throw(std::runtime_error("faild to create socket"));
-	/*Create socket.
-		- SOCK_STREAM: Flag para el uso de protocolo de TCP. */
-
 	if(setsockopt(this->serSocketFd, SOL_SOCKET, SO_REUSEADDR, &en, sizeof(en)) == -1)
-		throw(std::runtime_error("faild to set option (SO_REUSEADDR) on socket"));
-	/*Establecer configuración.
-		- SOL_SOCKET: Opciones estándar, comunes para cualquier tipo de socket.
-		- SO_REUSEADDR: Permite reutilizar la dirección local, suele haber un 
-		tiempo de espera entre ejecucion y ejecucion puesto que se debe liberar la dirrecion
-		pero al usar esta Flag nos libramos de esa espera. */
-		
+		throw(std::runtime_error("faild to set option (SO_REUSEADDR) on socket"));		
 	if (fcntl(this->serSocketFd, F_SETFL, O_NONBLOCK) == -1) 
-		throw(std::runtime_error("faild to set option (O_NONBLOCK) on socket"));
-	/*Configuraciones en Fd: 
-		1. F__SETFL: Para Establecer Flags
-		2. O_NONBLOCK: Modo no bloqueante, lo que pide el subject */
-	
+		throw(std::runtime_error("faild to set option (O_NONBLOCK) on socket"));	
 	if (bind(this->serSocketFd, (struct sockaddr *)&add, sizeof(add)) == -1)
 		throw(std::runtime_error("faild to bind socket"));
-	//Asignar IP y puerto.
-
 	if (listen(this->serSocketFd, SOMAXCONN) == -1) 
 		throw(std::runtime_error("listen() faild"));
-	//Socket en modo pasivo, listo para aceptar conexiones.
-
 	newPoll.fd = this->serSocketFd;
-	newPoll.events = POLLIN; //POLLIN: Monitorea si hay datos disponibles para leer en el descriptor
-	newPoll.revents = 0; //No hay evento previo.
+	newPoll.events = POLLIN;
+	newPoll.revents = 0;
 	fds.push_back(newPoll);
 	clients.push_back(aux);
 }
@@ -208,17 +160,14 @@ void Server::ServerInit()
 	std::cout << "Waiting to accept a connection...\n";
 	while (signal.getSignal() == false) 
 	{
-		if((poll(&fds[0],fds.size(),-1) == -1) && signal.getSignal() == false) //poll(); espera eventos de los sockets
+		if((poll(&fds[0],fds.size(),-1) == -1) && signal.getSignal() == false)
 			throw(std::runtime_error("poll() faild"));
-		/* poll(); espera eventos de los sockets
-			- En este caso estamos pendintes del fds[0], el fd del server para 
-			estar pedientes de nuevas conexiones. */
 		for (size_t i = 0; i < fds.size(); i++)
 		{
-			if (fds[i].revents & POLLIN){  //checkeamos que tengamos eventos pendientes
-				if (fds[i].fd == serSocketFd) //checkeamos si es el fd del server
+			if (fds[i].revents & POLLIN){
+				if (fds[i].fd == serSocketFd)
 					AcceptNewClient();
-				else  //posible error, necesidad de control de errores para un segundo user.
+				else
 					ReceiveNewData(i);
 			}
 		}
