@@ -32,7 +32,7 @@ class Client
         bool                    passwd;
         User                    user;
         std::string             nick;
-        std::vector<Channel*>    channels;
+        std::vector<Channel*>   channels;
         std::string ip;
         int fd;
 
@@ -55,5 +55,6 @@ class Client
         void setUser(User& user);
         void setPasswd(std::string passwd);
         void setChannel(Channel* channel);
+        void CleanChannels();
 };
 #endif

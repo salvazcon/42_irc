@@ -3,34 +3,10 @@
 Client::~Client()
 {
     //std::cout << "Client destructor called" << std::endl;
-	//Mala gestion de memoria, tal vez... ?
-	for (size_t i = 0; i < this->channels.size();)
-	{
-		//std::cout << this->channels[i]->getName() << " user size: " << this->channels[i]->getUsers().size() << std::endl;
-		if(this->channels[i]->getUsers().size() == 1) //algo pasa con la leng de los usuarios.
-		{
-			//std::cout << "channel eliminado " << this->channels[i]->getName() << std::endl;
-			delete channels[i];
-			channels.erase(this->channels.begin() + i);
-		}
-		else
-		{
-			for (size_t j = 0; j < this->channels[i]->getUsers().size(); j++)
-			{
-				if(this->nick == this->channels[i]->getUser(j))
-				{
-					//std::cout << "usuario eliminado " << this->channels[i]->getUser(j)<< std::endl;
-					this->channels[i]->getUsers().erase(this->channels[i]->getUsers().begin() + j);
-					break ;
-				}
-			}
-			++i;
-		}
-	}
-	channels.clear(); 
+	this->CleanChannels();
 }
 
-Client::Client() : passwd(false), user(), nick(""), channels(), ip(""), fd(-1)
+Client::Client() : passwd(false), user(), channels(), ip(""), fd(-1)
 {
     //std::cout << "Client constructor called" << std::endl;
 }
@@ -136,4 +112,29 @@ void Client::setChannel(Channel* channel)
 {
 	if (channel != NULL)
         this->channels.push_back(channel);
+}
+
+void Client::CleanChannels()
+{
+	for (size_t i = 0; i < this->channels.size();)
+	{
+		if(this->channels[i]->getUsers().size() == 1)
+		{
+			delete channels[i];
+			channels.erase(this->channels.begin() + i);
+		}
+		else
+		{
+			for (size_t j = 0; j < this->channels[i]->getUsers().size(); j++)
+			{
+				if(this->nick == this->channels[i]->getUser(j))
+				{
+					this->channels[i]->getUsers().erase(this->channels[i]->getUsers().begin() + j);
+					break ;
+				}
+			}
+			++i;
+		}
+	}
+	channels.clear();
 }

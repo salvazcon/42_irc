@@ -9,7 +9,13 @@ int main(int argv, char *argc[])
         std::cerr << "Error: Invalid Arguments." << std::endl;
         return 1; 
     }
-	Server ser(atoi(argc[1]), argc[2]); //Control de errores puerto (MUST DO)
+	int port = atoi(argc[1]);
+	if(port < 1024 || port > 65535)
+	{
+        std::cerr << "Error: Invalid Port." << std::endl;
+        return 1;
+    }
+	Server ser(port, argc[2]);
 	std::cout << "---- SERVER ----" << std::endl;
 	try {
 		signal(SIGINT, Signal::SignalHandler);

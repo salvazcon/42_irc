@@ -5,7 +5,7 @@ Server::~Server()
     //std::cout << "Server destructor called" << std::endl;
 }
 
-Server::Server() : signal(), serSocketFd(-1)  //Control de errores puerto (MUST DO)
+Server::Server() : signal(), serSocketFd(-1)
 {
     //std::cout << "Server constructor called" << std::endl;
 }
@@ -70,7 +70,6 @@ void Server::ClearClient(int fd)
 	}
 }
 
-//Debemos limpiar el uso de Objectos por parte del sever?? clients(sets gets) fds(sets gets)
 void Server::ReceiveNewData(size_t i) 
 {
 	char buff[1024];
@@ -96,6 +95,8 @@ void Server::ReceiveNewData(size_t i)
 				CmdJOIN(clients, i, parametros, buff);
 			else if (parametros[0] == "PRIVMSG")
 				CmdPRIVMSG(clients, i, parametros, buff);
+			else if (parametros[0] == "INFO")
+				CmdINFO(clients, i, buff);
 			else
 				std::cout << "Command not found. " << buff << std::endl;
 		}

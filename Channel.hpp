@@ -22,7 +22,10 @@ class Channel
         std::string name;
         std::string passwd;
         std::vector<std::string> users;
-        //std::string topic;
+        //std::string   topic;
+        //bool          inviteOnly;
+        //bool          limit;
+        //size_t        numLimit;
     
     public:
         ~Channel(void);

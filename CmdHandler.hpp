@@ -22,8 +22,7 @@
     void CmdNICK(std::vector<Client>& clients, size_t i, std::vector<std::string> parametros, char buff[1024]);
     void CmdUSER(std::vector<Client>& clients, size_t i, std::vector<std::string> parametros, char buff[1024]);
     void CmdJOIN(std::vector<Client>& clients, size_t i, std::vector<std::string> parametros, char buff[1024]);
-    int SearchChannel(std::vector<Client>& clients, int i, std::vector<std::string> temp_channels, std::vector<std::string> temp_passwds, int j, char buff[1024]);
-    int SearchUser(std::vector<Client>& clients, size_t i, size_t l, size_t k);
     void CmdPRIVMSG(std::vector<Client>& clients, size_t i, std::vector<std::string> parametros, char buff[1024]);
+    void CmdINFO(std::vector<Client>& clients, size_t i, char buff[1024]);
 
 #endif
