@@ -2,6 +2,7 @@
 
 /* 
 - Crear mensaje para usuario y server de forma consecutiva.
+- Control de errores al comando send o recv ???
 */
 
 int ForbiddenSpace(std::string word)
@@ -253,9 +254,9 @@ void CmdPRIVMSG(std::vector<Client>& clients, size_t i, std::vector<std::string>
 {
 	if((clients[i].getPasswd() == false ) ||(clients[i].getNick().empty()) || (clients[i].getUser()->getUserName().empty()))
 		std::cout << "Client <" << clients[i].getFd() << "> :You have not registered" << std::endl;
-	else if (parametros.size() < 2)
+	else if (parametros.size() < 3)
 		std::cout << "Client <" << clients[i].getFd() << "> "<< buff << " :Not enough parameters" << std::endl;
-	else if ((parametros[2][0] == ':') && (parametros[2].size() > 1 || parametros.size() > 3))
+	else if ((!ForbiddenJoin(parametros[1])) && (parametros[2][0] == ':'))
 	{
 		std::vector<std::string> temp_target = ft_split(parametros[1].c_str(), ',');
 		std::string str(buff);
