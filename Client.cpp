@@ -2,14 +2,10 @@
 
 Client::~Client()
 {
-    //std::cout << "Client destructor called" << std::endl;
 	this->CleanChannels();
 }
 
-Client::Client() : passwd(false), user(), channels(), ip(""), fd(-1)
-{
-    //std::cout << "Client constructor called" << std::endl;
-}
+Client::Client() : passwd(false), user(), channels(), ip(""), fd(-1){}
 
 Client& Client::operator=(const Client& other)
 {
@@ -35,6 +31,7 @@ Client& Client::operator=(const Client& other)
         this->passwd = other.passwd;
         this->nick = other.nick;
         this->user = other.user;
+        this->invitations = other.invitations;
         channels.swap(tempChannels);
     }
     return *this;
@@ -42,7 +39,6 @@ Client& Client::operator=(const Client& other)
 
 Client::Client(const Client &cp): channels()
 {
-	//std::cout << "Client copy constructor called" << std::endl;
 	*this = cp;
 }
 
@@ -68,19 +64,36 @@ std::string Client::getNick()
 
 User* Client::getUser()
 {
-	return &user;
+    return &user;
 }
 
 Channel* Client::getChannel(size_t i)
 {
-	if(channels.size() > i)
-		return channels[i];
+    if (channels.size() > i)
+    {
+        return channels[i];
+    }
 	return NULL;
 }
 
-std::vector<Channel*> Client::getChannels()
+std::vector<Channel*>& Client::getChannels()
 {
-	return channels;
+    return channels;
+}
+
+std::vector<std::string> Client::getInvitations()
+{
+    return invitations;
+}
+
+bool Client::getInvitation(std::string channel)
+{
+    for (size_t i = 0; i < invitations.size(); ++i)
+    {
+        if (invitations[i] == channel)
+            return true;
+    }
+    return false;
 }
 
 void Client::setFd(int fd)
@@ -114,27 +127,58 @@ void Client::setChannel(Channel* channel)
         this->channels.push_back(channel);
 }
 
+int Client::setInvitation(std::string channel)
+{
+    if (!channel.empty())
+    {
+        if (std::find(this->invitations.begin(), this->invitations.end(), channel) == this->invitations.end())
+        {
+            this->invitations.push_back(channel);
+            return 1;
+        }    
+    }
+    return 0;
+}
+
+void Client::removeInvitation(std::string channel)
+{
+    for (size_t i = 0; i < invitations.size(); ++i)
+    {
+        if (invitations[i] == channel)
+        {
+            invitations.erase(invitations.begin() + i);
+            break;
+        }
+    }
+}
+
+void  Client::removeChannel(Channel *channel)
+{
+    std::vector<Channel*>::iterator it = std::find(channels.begin(), channels.end(), channel);
+    if (it != channels.end()) 
+    {
+        channel->removeUser(this->nick);
+        channel->removeOperator(this->nick);
+        channels.erase(it);
+        if (channel->getUsers().empty()) 
+            delete channel;
+    }
+}
+
 void Client::CleanChannels()
 {
-	for (size_t i = 0; i < this->channels.size();)
-	{
-		if(this->channels[i]->getUsers().size() == 1)
-		{
-			delete channels[i];
-			channels.erase(this->channels.begin() + i);
-		}
-		else
-		{
-			for (size_t j = 0; j < this->channels[i]->getUsers().size(); j++)
-			{
-				if(this->nick == this->channels[i]->getUser(j))
-				{
-					this->channels[i]->getUsers().erase(this->channels[i]->getUsers().begin() + j);
-					break ;
-				}
-			}
-			++i;
-		}
-	}
-	channels.clear();
+    for (size_t i = 0; i < this->channels.size();)
+    {
+        Channel* channel = this->channels[i];
+
+        channel->removeUser(this->nick);
+        channel->removeOperator(this->nick);
+        if (channel->getUsers().empty())
+        {
+            delete channel;
+            channels.erase(channels.begin() + i);
+        }
+        else
+            ++i;
+    }
 }

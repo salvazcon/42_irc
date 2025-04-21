@@ -1,23 +1,13 @@
 #include "Server.hpp"
 
-Server::~Server()
-{
-    //std::cout << "Server destructor called" << std::endl;
-}
+Server::~Server(){}
 
-Server::Server() : signal(), serSocketFd(-1)
-{
-    //std::cout << "Server constructor called" << std::endl;
-}
+Server::Server() : signal(), serSocketFd(-1){}
 
-Server::Server(int port, std::string passwd) : port(port), signal(), serSocketFd(-1), passwd(passwd)
-{
-    //std::cout << "Server constructor called" << std::endl;
-}
+Server::Server(int port, std::string passwd) : port(port), signal(), serSocketFd(-1), passwd(passwd){}
 
 Server& Server::operator=(const Server &other)
 {
-	//std::cout << "Server copy assignment operator called" << std::endl;
 	this->port = other.port;
 	this->signal = other.signal;
 	this->serSocketFd = other.serSocketFd;
@@ -29,13 +19,12 @@ Server& Server::operator=(const Server &other)
 
 Server::Server(const Server &cp)
 {
-	//std::cout << "Server copy constructor called" << std::endl;
 	*this = cp;
 }
 
 void Server::CloseFds()
 {
-    for (size_t i = 1; i < clients.size(); i++) {
+    for (size_t i = 1; i < clients.size(); ++i) {
         int clientFd = clients[i].getFd();
         if (close(clientFd) == -1)
             std::cerr << RED << "Error closing client descriptor <" << clientFd << ">: " << std::endl;
@@ -56,13 +45,13 @@ void Server::CloseFds()
 
 void Server::ClearClient(int fd)
 {
-	for(size_t i = 0; i < fds.size(); i++){
+	for(size_t i = 0; i < fds.size(); ++i){
 		if (fds[i].fd == fd) {
 			fds.erase(fds.begin() + i); 
 			break;
 		}
 	}
-	for(size_t i = 0; i < clients.size(); i++){
+	for(size_t i = 0; i < clients.size(); ++i){
 		if (clients[i].getFd() == fd) {
 			clients.erase(clients.begin() + i);
 			break;
@@ -70,7 +59,16 @@ void Server::ClearClient(int fd)
 	}
 }
 
-void Server::ReceiveNewData(size_t i) 
+int ForbiddenChar(std::vector<std::string> parametros)
+{
+	for (size_t i = 0; i < parametros.size(); ++i)
+		for (size_t j = 0; j < parametros[i].size(); ++j)
+			if (parametros[i][j] == '\t' || parametros[i][j] == '\r' || parametros[i][j] == '\n')
+				return 1;
+	return 0;
+}
+
+void Server::ReceiveNewData(size_t i)
 {
 	char buff[1024];
 	memset(buff, 0, sizeof(buff));
@@ -85,7 +83,9 @@ void Server::ReceiveNewData(size_t i)
 		{
 			buff[bytes - 1] = '\0';
 			std::vector<std::string> parametros = ft_split(buff, ' ');
-			if (parametros[0] == "PASS")
+			if (ForbiddenChar(parametros))
+				send(clients[i].getFd(), (std::string(buff) + " :Invalid characters in message.\n").c_str(), 33 + strlen(buff), 0);
+			else if (parametros[0] == "PASS")
 				CmdPASS(clients, passwd, i, parametros, buff);
 			else if (parametros[0] == "NICK")
 				CmdNICK(clients, i, parametros, buff);
@@ -95,10 +95,18 @@ void Server::ReceiveNewData(size_t i)
 				CmdJOIN(clients, i, parametros, buff);
 			else if (parametros[0] == "PRIVMSG")
 				CmdPRIVMSG(clients, i, parametros, buff);
+			else if (parametros[0] == "KICK")
+				CmdKICK(clients, i, parametros, buff);
+			else if (parametros[0] == "TOPIC")
+                CmdTOPIC(clients, i, parametros, buff);
+			else if (parametros[0] == "INVITE")
+    			CmdINVITE(clients, i, parametros, buff);
+			else if (parametros[0] == "MODE")
+    			CmdMODE(clients, i, parametros, buff);
 			else if (parametros[0] == "INFO")
 				CmdINFO(clients, i, buff);
 			else
-				std::cout << "Command not found. " << buff << std::endl;
+				send(clients[i].getFd(), (std::string(buff) + " :Command not found.\n").c_str(), 21 + strlen(buff), 0);
 		}
 	}
 }
@@ -128,7 +136,7 @@ void Server::AcceptNewClient()
 void Server::SocketInit()
 {
 	int en = 1;
-	Client aux; //nodo vacio
+	Client aux;
 	struct sockaddr_in add;
 	struct pollfd newPoll;
 
@@ -163,7 +171,7 @@ void Server::ServerInit()
 	{
 		if((poll(&fds[0],fds.size(),-1) == -1) && signal.getSignal() == false)
 			throw(std::runtime_error("poll() faild"));
-		for (size_t i = 0; i < fds.size(); i++)
+		for (size_t i = 0; i < fds.size(); ++i)
 		{
 			if (fds[i].revents & POLLIN){
 				if (fds[i].fd == serSocketFd)

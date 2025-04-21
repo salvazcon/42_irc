@@ -17,24 +17,25 @@
 #include "User.hpp"
 #include "Channel.hpp"
 
-//-------------------------------------------------------//
+//-------------------------//
 #define RED "\e[1;31m" //-> for red color
 #define WHI "\e[0;37m" //-> for white color
 #define GRE "\e[1;32m" //-> for green color
 #define YEL "\e[1;33m" //-> for yellow color
-//-------------------------------------------------------//
+//-------------------------//
 
 class Client
 {
     protected:
 
     private:
-        bool                    passwd;
-        User                    user;
-        std::string             nick;
-        std::vector<Channel*>   channels;
-        std::string ip;
-        int fd;
+        bool                        passwd;
+        User                        user;
+        std::string                 nick;
+        std::vector<Channel*>       channels;
+        std::vector<std::string>    invitations;
+        std::string                 ip;
+        int                         fd;
 
     public:
         ~Client(void);
@@ -47,7 +48,10 @@ class Client
         std::string getNick();
         User* getUser();
         Channel* getChannel(size_t i);
-        std::vector<Channel*> getChannels();
+        bool getInvitation(std::string channel);
+        std::vector<Channel*>& getChannels();
+        std::vector<std::string> getInvitations();
+        int setInvitation(std::string channel);
         void setFd(int fd);
         void setIp(std::string ipadd);
         void setPasswd(bool passwd);
@@ -55,6 +59,11 @@ class Client
         void setUser(User& user);
         void setPasswd(std::string passwd);
         void setChannel(Channel* channel);
+        void removeInvitation(std::string channel);
+        void removeChannel(Channel *channel);
         void CleanChannels();
 };
+
 #endif
+
+

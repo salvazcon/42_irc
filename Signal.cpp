@@ -1,27 +1,19 @@
 #include "Signal.hpp"
 
-Signal::~Signal()
-{
-    //std::cout << "Signal destructor called" << std::endl;
-}
+Signal::~Signal(){}
 
-Signal::Signal()
-{
-    //std::cout << "Signal constructor called" << std::endl;
-}
+Signal::Signal(){}
 
 bool Signal::signal = false;
 
 Signal& Signal::operator=(const Signal &other)
 {
-	//std::cout << "Signal copy assignment operator called" << std::endl;
     this->signal = other.signal;
 	return *this;
 }
 
 Signal::Signal(const Signal &cp)
 {
-	//std::cout << "Signal copy constructor called" << std::endl;
 	*this = cp;
 }
 

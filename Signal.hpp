@@ -20,7 +20,7 @@ class Signal
 
     private:
         static bool signal;
-
+        
     public:
         ~Signal(void);
         Signal(void);

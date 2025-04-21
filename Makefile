@@ -6,7 +6,8 @@ Signal.cpp \
 CmdHandler.cpp \
 Utils.cpp \
 Channel.cpp \
-User.cpp
+User.cpp \
+Topic.cpp
 
 OBJS		= ${SRCS:%.cpp=%.o}
 DEPS		= ${SRCS:.cpp=.d}

@@ -1,23 +1,13 @@
 #include "User.hpp"
 
-User::~User()
-{
-    //std::cout << "User destructor called" << std::endl;
-}
+User::~User(){}
 
-User::User(): userName(""), realName(""), userMode(0)
-{
-    //std::cout << "User constructor called" << std::endl;
-}
+User::User(): userName(""), realName(""), userMode(0){}
 
-User::User(std::string user, std::string real, int mode): userName(user), realName(real), userMode(mode)
-{
-    //std::cout << "User constructor called" << std::endl;
-}
+User::User(std::string user, std::string real, int mode): userName(user), realName(real), userMode(mode){}
 
 User& User::operator=(const User &other)
 {
-	//std::cout << "User copy assignment operator called" << std::endl;
     this->userName = other.userName;
     this->realName = other.realName;
     this->userMode = other.userMode;
@@ -26,7 +16,6 @@ User& User::operator=(const User &other)
 
 User::User(const User &cp)
 {
-	//std::cout << "User copy constructor called" << std::endl;
 	*this = cp;
 }
 
