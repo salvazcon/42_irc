@@ -32,6 +32,7 @@ class Client
         bool                        passwd;
         User                        user;
         std::string                 nick;
+        std::string                 inputBuffer;
         std::vector<Channel*>       channels;
         std::vector<std::string>    invitations;
         std::string                 ip;
@@ -46,6 +47,7 @@ class Client
         bool getPasswd();
         std::string getIp();
         std::string getNick();
+        std::string& getInputBuffer();
         User* getUser();
         Channel* getChannel(size_t i);
         bool getInvitation(std::string channel);
@@ -53,12 +55,13 @@ class Client
         std::vector<std::string> getInvitations();
         int setInvitation(std::string channel);
         void setFd(int fd);
-        void setIp(std::string ipadd);
-        void setPasswd(bool passwd);
-        void setNick(std::string nick);
         void setUser(User& user);
-        void setPasswd(std::string passwd);
+        void setPasswd(bool passwd);
+        void setIp(std::string ipadd);
+        void setNick(std::string nick);
         void setChannel(Channel* channel);
+        void setPasswd(std::string passwd);
+        void setInputBuffer(std::string& buffer);
         void removeInvitation(std::string channel);
         void removeChannel(Channel *channel);
         void CleanChannels();

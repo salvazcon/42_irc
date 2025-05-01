@@ -62,6 +62,11 @@ std::string Client::getNick()
 	return nick;
 }
 
+std::string& Client::getInputBuffer()
+{
+    return inputBuffer;
+}
+
 User* Client::getUser()
 {
     return &user;
@@ -114,6 +119,11 @@ void Client::setPasswd(bool passwd)
 void Client::setNick(std::string nick)
 {
 	this->nick = nick;
+}
+
+void Client::setInputBuffer(std::string& buffer)
+{
+	this->inputBuffer = buffer;
 }
 
 void Client::setUser(User& user)

@@ -1,11 +1,5 @@
 #include "CmdHandler.hpp"
 
-/*
-MUST DO:
-  //mensaje error cliente (cliente IRC ejemplo)
-  //funcion extra en MODE +-l
-*/
-
 int ForbiddenJoin(std::string word)
 {
 	if((word.find(":") == std::string::npos) && \
@@ -92,50 +86,60 @@ void SendMsg(std::vector<Client>& clients, size_t i, std::string msg)
 	send(clients[i].getFd(), msg.c_str(), strlen(msg.c_str()), 0);
 }
 
+void SendWelcome(std::vector<Client>& clients, size_t i)
+{
+    if (!clients[i].getNick().empty() && !clients[i].getUser()->getUserName().empty())
+    {
+        SendMsg(clients, i, ":ircserver 001 " + clients[i].getNick() + " :Welcome to the IRC server " + clients[i].getNick() + "\r\n");
+		SendMsg(clients, i, ":ircserver 002 " + clients[i].getNick() + " :Your host is ircserver, running version 1.0\r\n");
+		SendMsg(clients, i, ":ircserver 003 " + clients[i].getNick() + " :This server was created today\r\n");
+		SendMsg(clients, i, ":ircserver 004 " + clients[i].getNick() + " ircserver 1.0 o o\r\n");
+    }
+}
+
 void CmdPASS(std::vector<Client>& clients, std::string Passwd, size_t i, std::vector<std::string> parametros, char buff[1024])
 {
 	if (parametros.size() < 2)
-        SendMsg(clients, i, std::string(buff) + " :Not enough parameters\n");
+        SendMsg(clients, i, ":ircserver 461 " +  (clients[i].getNick().empty() ? "*" : clients[i].getNick()) + " " + std::string(buff) + " :Not enough parameters\r\n");
 	else if (parametros.size() != 2)
-        SendMsg(clients, i, std::string(buff) + " :Erroneus parameters\n");
+        SendMsg(clients, i, ":ircserver 461 " +  (clients[i].getNick().empty() ? "*" : clients[i].getNick()) + " " + std::string(buff) + " :Erroneous parameters\r\n");
 	else
 	{
 		if((parametros[1] == Passwd))
 		{
 			if (clients[i].getPasswd() == true)
 			{
-				SendMsg(clients, i, "You may not reregister\n");
+				SendMsg(clients, i, ":ircserver 462 " +  (clients[i].getNick().empty() ? "*" : clients[i].getNick()) + " :You may not reregister\r\n");
 				return ;
 			}
 			clients[i].setPasswd(true);
-			SendMsg(clients, i, "Password correct\n");
 		}
 		else
-            SendMsg(clients, i, "Password incorrect\n");
+            SendMsg(clients, i, ":ircserver 464 " +  (clients[i].getNick().empty() ? "*" : clients[i].getNick()) + " :Password incorrect\r\n");
 	}
 }
 
 void CmdNICK(std::vector<Client>& clients, size_t i, std::vector<std::string> parametros, char buff[1024])
 {
 	if(clients[i].getPasswd() == false)
-        SendMsg(clients, i, "You have not registered\n");
+        SendMsg(clients, i, ":ircserver 451 " + (clients[i].getNick().empty() ? "*" : clients[i].getNick()) + " :You have not registered\r\n");
 	else if (parametros.size() == 1)
-        SendMsg(clients, i, "No nickname given\n");
+        SendMsg(clients, i, ":ircserver 431 " + (clients[i].getNick().empty() ? "*" : clients[i].getNick()) + " :No nickname given\r\n");
 	else if (parametros.size() != 2)
-		SendMsg(clients, i, std::string(buff) + " :Erroneus parameters\n");
+        SendMsg(clients, i, ":ircserver 461 " + (clients[i].getNick().empty() ? "*" : clients[i].getNick()) + " " + std::string(buff) + " :Erroneous parameters\r\n");
 	else if((parametros[1].size() <= 9) && !ForbiddenChars(parametros[1]) && !std::isdigit(parametros[1][0]))
 	{
 		for (size_t j = 0; j < clients.size(); ++j)
 		{
             if (j != i && parametros[1] == clients[j].getNick())
 			{
-                SendMsg(clients, i, parametros[1] + " :Nickname is already in use\n");
+                SendMsg(clients, i, ":ircserver 433 " + (clients[i].getNick().empty() ? "*" : clients[i].getNick()) + " " + parametros[1] + " :Nickname is already in use\r\n");
                 return ;
             }
         }
 		if(!clients[i].getNick().empty())
 		{
-			SendMsg(clients, i, clients[i].getNick() + " NICK " + parametros[1] + "\n");
+			SendMsg(clients, i, ":" + clients[i].getNick() + " NICK " + parametros[1] + "\r\n");
 			for (size_t j = 0; j < clients[i].getChannels().size(); ++j)
 			{
 				for(size_t k = 0; k < clients[i].getChannel(j)->getUsers().size(); ++k)
@@ -146,23 +150,21 @@ void CmdNICK(std::vector<Client>& clients, size_t i, std::vector<std::string> pa
 						clients[i].getChannel(j)->setUser(parametros[1]);
 					}
 				}
-                ListenEverybody(clients, clients[i].getChannel(j), clients[i].getNick() + " NICK " + parametros[1] + "\n", 0);
+                ListenEverybody(clients, clients[i].getChannel(j), ":" + clients[i].getNick() + "!" + (clients[i].getUser()->getUserName().empty() ? "*" : clients[i].getUser()->getUserName()) + "@" + clients[i].getIp() + " NICK " + parametros[1] + "\r\n", 0);
 			}
 		}
-		else
-            SendMsg(clients, i, "Nick correct\n");
-		clients[i].setNick(parametros[1]);
+        clients[i].setNick(parametros[1]);
 	}
 	else
-        SendMsg(clients, i, "Erroneus nickname\n");
+        SendMsg(clients, i, ":ircserver 432 " + (clients[i].getNick().empty() ? "*" : clients[i].getNick()) + " " + parametros[1] + " :Erroneous nickname\r\n");
 }
 
 void CmdUSER(std::vector<Client>& clients, size_t i, std::vector<std::string> parametros, char buff[1024])
 {
-	if((clients[i].getPasswd() == false ) || (clients[i].getNick().empty()))
-        SendMsg(clients, i, "You have not registered\n");
+	if ((clients[i].getPasswd() == false ) || (clients[i].getNick().empty()))
+        SendMsg(clients, i, ":ircserver 451 " + (clients[i].getNick().empty() ? "*" : clients[i].getNick()) + " :You have not registered\r\n");
 	else if ((parametros.size() < 5) || (parametros.size() == 5 && parametros[4].size() == 1 && parametros[4][0] == ':'))
-        SendMsg(clients, i, std::string(buff) + " :Not enough parameters\n");
+        SendMsg(clients, i, ":ircserver 461 " + (clients[i].getNick().empty() ? "*" : clients[i].getNick()) + " " + std::string(buff) + " :Not enough parameters\r\n");
 	else if ((!ForbiddenChars(parametros[1])) && \
 	(parametros[2] == "0") && \
 	(parametros[3] == "*") && \
@@ -171,30 +173,30 @@ void CmdUSER(std::vector<Client>& clients, size_t i, std::vector<std::string> pa
         std::string realname = FtColons(buff);
 		if(!clients[i].getUser()->getUserName().empty())
 		{	
-			SendMsg(clients, i, "You may not reregister\n");
+			SendMsg(clients, i, ":ircserver 462 " + clients[i].getNick() + " :You may not reregister\r\n");
 			return ;
 		}
 		User user(parametros[1], realname, atoi(parametros[2].c_str()));
 		clients[i].setUser(user);
-		SendMsg(clients, i, "User correct\n");
-        SendMsg(clients, i, "Welcome to the Internet Relay Network " + clients[i].getNick() + "\n");
+		SendWelcome(clients, i);
 	}
 	else
-        SendMsg(clients, i, std::string(buff) + " :Erroneous parameters\n");
+    SendMsg(clients, i, ":ircserver 461 " + (clients[i].getNick().empty() ? "*" : clients[i].getNick()) + " " + std::string(buff) + " :Erroneous parameters\r\n");
 }
 
 void ConfigJoin(std::vector<Client>& clients, size_t i, std::vector<std::string> temp_channels, size_t j, size_t k, size_t l)
 {
     if(!clients[k].getChannel(l)->getTopic()->getTopic().empty())
-        SendMsg(clients, i, temp_channels[j] + " :" + clients[k].getChannel(l)->getTopic()->getTopic() + "\n");
-    SendMsg(clients, i, temp_channels[j] + " :");
+        SendMsg(clients, i, ":ircserver 332 " + clients[i].getNick() + " " + temp_channels[j] + " :" + clients[k].getChannel(l)->getTopic()->getTopic() + "\r\n");
+    SendMsg(clients, i, ":ircserver 353 " + clients[i].getNick() + " " + temp_channels[j] + " :");
+    std::string user_list;
     for (size_t m = 0; m < clients[k].getChannel(l)->getUsers().size(); ++m)
-        SendMsg(clients, i, clients[k].getChannel(l)->getUser(m) + " ");
-    SendMsg(clients, i, "\n");
+        user_list += clients[k].getChannel(l)->getUser(m) + " ";
+    SendMsg(clients, i, user_list + "\r\n");
+    SendMsg(clients, i, ":ircserver 366 " + clients[i].getNick() + " " + temp_channels[j] + " :End of /NAMES list\r\n");
     clients[k].getChannel(l)->setUser(clients[i].getNick());
     clients[i].setChannel(clients[k].getChannel(l));
-    SendMsg(clients, i, "JOIN " + temp_channels[j] + "\n");
-    ListenEverybody(clients, clients[k].getChannel(l), clients[i].getNick() + " JOIN " + temp_channels[j] + "\n", 0);
+    ListenEverybody(clients, clients[k].getChannel(l), ":" + clients[i].getNick() + "!" + clients[i].getUser()->getUserName() + "@" + clients[i].getIp() + " JOIN " + temp_channels[j] + "\r\n", 0);
     clients[i].removeInvitation(temp_channels[j]);
 }
 
@@ -209,13 +211,13 @@ void ChannelMode(std::vector<Client>& clients, size_t i, std::vector<std::string
                 if(clients[k].getChannel(l)->getUsers().size() < clients[k].getChannel(l)->getLimit())   
                     ConfigJoin(clients, i, temp_channels, j, k, l);
                 else
-                    SendMsg(clients, i, temp_channels[j] + " :Cannot join channel (+l) - Channel is full\n");
+                    SendMsg(clients, i, ":ircserver 471 " + clients[i].getNick() + " " + temp_channels[j] + " :Cannot join channel (+l) - Channel is full\r\n");
             }
             else
                 ConfigJoin(clients, i, temp_channels, j, k, l);
         }
         else
-            SendMsg(clients, i, temp_channels[j] + " :Cannot join channel (+i)\n");
+            SendMsg(clients, i, ":ircserver 473 " + clients[i].getNick() + " " + temp_channels[j] + " :Cannot join channel (+i) - You must be invited\r\n");
     }
     else
     {
@@ -224,7 +226,7 @@ void ChannelMode(std::vector<Client>& clients, size_t i, std::vector<std::string
             if(clients[k].getChannel(l)->getUsers().size() < clients[k].getChannel(l)->getLimit())   
                 ConfigJoin(clients, i, temp_channels, j, k, l);
             else
-                SendMsg(clients, i, temp_channels[j] + " :Cannot join channel (+l) - Channel is full\n");
+                SendMsg(clients, i, ":ircserver 471 " + clients[i].getNick() + " " + temp_channels[j] + " :Cannot join channel (+l) - Channel is full\r\n");
         }
         else
             ConfigJoin(clients, i, temp_channels, j, k, l);
@@ -247,7 +249,7 @@ int	SearchChannel(std::vector<Client>& clients, size_t i, std::vector<std::strin
                     if (temp_passwds.size() > j && clients[k].getChannel(l)->getPasswd() == temp_passwds[j])
                         ChannelMode(clients, i, temp_channels, j, k, l);
                     else
-                        SendMsg(clients, i, temp_channels[j] + " :Cannot join channel (+k)\n");
+                        SendMsg(clients, i, ":ircserver 475 " + clients[i].getNick() + " " + temp_channels[j] + " :Cannot join channel (+k) - Bad channel key\r\n");
                 }               
                 else
                     ChannelMode(clients, i, temp_channels, j, k, l);
@@ -261,15 +263,15 @@ int	SearchChannel(std::vector<Client>& clients, size_t i, std::vector<std::strin
 void CmdJOIN(std::vector<Client>& clients, size_t i, std::vector<std::string> parametros, char buff[1024])
 {   
     if((clients[i].getPasswd() == false ) ||(clients[i].getNick().empty()) || (clients[i].getUser()->getUserName().empty()))
-        SendMsg(clients, i, "You have not registered\n");
+        SendMsg(clients, i, ":ircserver 451 " + (clients[i].getNick().empty() ? "*" : clients[i].getNick()) + " :You have not registered\r\n");
     else if (parametros.size() < 2)
-        SendMsg(clients, i, std::string(buff) + " :Not enough parameters\n");
+        SendMsg(clients, i, ":ircserver 461 " + clients[i].getNick() + " " + std::string(buff) + " :Not enough parameters\r\n");
 	else if (parametros.size() >= 2 && parametros.size() <= 3)
 	{
 		if(parametros[1] == "0")
 		{
 			for(size_t j = 0; j < clients[i].getChannels().size(); ++j)
-				ListenEverybody(clients, clients[i].getChannel(j), clients[i].getNick() + " PART " + clients[i].getChannel(j)->getName() + "\n", i);
+				ListenEverybody(clients, clients[i].getChannel(j), ":" + clients[i].getNick() + "!" + clients[i].getUser()->getUserName() + "@" + clients[i].getIp() + " PART " + clients[i].getChannel(j)->getName() + "\r\n", i);
 			clients[i].CleanChannels();
 			return ;
 		}
@@ -292,104 +294,44 @@ void CmdJOIN(std::vector<Client>& clients, size_t i, std::vector<std::string> pa
                         channel->setUser(clients[i].getNick());
                         channel->setFounder(clients[i].getNick());
                         clients[i].setChannel(channel);
-                        SendMsg(clients, i, temp_channels[j] + " :Channel created\n");
-                        std::string msg = "JOIN " + temp_channels[j] + "\n";
-                        send(clients[i].getFd(), msg.c_str(), strlen(msg.c_str()), 0);
+                        SendMsg(clients, i, ":ircserver 324 " + clients[i].getNick() + " " + temp_channels[j] + "\r\n");
                     }
                     else
-                        SendMsg(clients, i, temp_channels[j] + " :Invalid channel name (too long)\n");
+                        SendMsg(clients, i, ":ircserver 479 " + clients[i].getNick() + " " + temp_channels[j] + " :Invalid channel name (too long)\r\n");
                 }
 			}
 			else
-                SendMsg(clients, i, temp_channels[j] + " :Bad Channel Mask\n");
+                SendMsg(clients, i, ":ircserver 476 " + clients[i].getNick() + " " + temp_channels[j] + " :Bad Channel Mask\r\n");
 		}
 	}
 	else
-        SendMsg(clients, i, std::string(buff) + " :Erroneous parameters\n");
+        SendMsg(clients, i, ":ircserver 461 " + clients[i].getNick() + " " + std::string(buff) + " :Erroneous parameters\r\n");
 }
 
 void CmdPRIVMSG(std::vector<Client>& clients, size_t i, std::vector<std::string> parametros, char buff[1024])
 {
 	if((clients[i].getPasswd() == false ) ||(clients[i].getNick().empty()) || (clients[i].getUser()->getUserName().empty()))
-        SendMsg(clients, i, "You have not registered\n");
+        SendMsg(clients, i, ":ircserver 451 " + (clients[i].getNick().empty() ? "*" : clients[i].getNick()) + " :You have not registered\r\n");
 	else if (parametros.size() < 3)
-        SendMsg(clients, i, std::string(buff) + ": Not enough parameters\n");
+        SendMsg(clients, i, ":ircserver 461 " + clients[i].getNick() + " " + std::string(buff) + " :Not enough parameters\r\n");
 	else if ((!ForbiddenJoin(parametros[1])) && (parametros[2][0] == ':'))
 	{
 		std::vector<std::string> temp_target = ft_split(parametros[1].c_str(), ',');
         std::string temp_msg = FtColons(buff);
 		if(temp_msg.empty())
-			SendMsg(clients, i, std::string(buff) + " : No text to send\n");
+            SendMsg(clients, i, ":ircserver 412 " + clients[i].getNick() + " :No text to send\r\n");
         else if (temp_msg.length() > 512)
-            SendMsg(clients, i, temp_msg + ": Topic too long\n");
+            SendMsg(clients, i, ":ircserver 416 " + clients[i].getNick() + " " + temp_msg + " :Topic too long\r\n");
         else
         {
-            temp_msg = clients[i].getNick() + ": " + temp_msg + "\n";
             for(size_t j = 0; j < temp_target.size(); ++j)
-                if(!SearchTarget(clients, temp_target[j], temp_msg, i))
-                    SendMsg(clients, i, temp_target[j] + ": No such nick/channel\n");
+                if(!SearchTarget(clients, temp_target[j], ":" + clients[i].getNick() + "!" + clients[i].getUser()->getUserName() + "@" + clients[i].getIp() + " PRIVMSG " + temp_target[j] + " :" + temp_msg + "\r\n", i))
+                    SendMsg(clients, i, ":ircserver 401 " + clients[i].getNick() + " " + temp_target[j] + " :No such nick/channel\r\n");
         }
 	}
 	else
-        SendMsg(clients, i, std::string(buff) + ": Erroneous parameters\n");
+        SendMsg(clients, i, ":ircserver 461 " + clients[i].getNick() + " " + std::string(buff) + " :Erroneous parameters\r\n");
 }
-
-void CmdINFO(std::vector<Client>& clients, size_t i, char buff[1024])
-{
-	if(clients[i].getPasswd() == false)
-		std::cout << "Empty Pass. " << buff << std::endl;
-	else if(clients[i].getNick().empty())
-		std::cout << "Empty Nick. " << buff << std::endl;
-	else if(clients[i].getUser()->getUserName().empty())
-		std::cout << "Empty User. " << buff << std::endl;
-	else
-	{
-        std::cout << "-----------------INFO-------------------" << std::endl;
-		for (size_t k = 1; k < clients.size(); ++k)
-		{
-			std::cout << "-----------------------------------------" << std::endl;
-			std::cout << "PASS: " << clients[k].getPasswd() << "." << std::endl;
-			std::cout << "NICK: " << clients[k].getNick() << "." << std::endl;
-			std::cout << "USER: " << std::endl;
-			std::cout << "- username: " << clients[k].getUser()->getUserName() << "." << std::endl;
-			std::cout << "- realname: " << clients[k].getUser()->getRealName() << "." << std::endl;
-			std::cout << "- usermode: " << clients[k].getUser()->getUserMode() << "." << std::endl;
-			for (size_t l = 0; l < clients[k].getChannels().size(); ++l)
-			{
-				std::cout << l << "_CHANNEL: " << std::endl;
-				std::cout << "- name: " << clients[k].getChannel(l)->getName() << "." << std::endl;
-				std::cout << "- passwd: " << clients[k].getChannel(l)->getPasswd() << "." << std::endl;
-                std::cout << "- founder: " << clients[k].getChannel(l)->getFounder() << "." << std::endl;
-				std::cout << "- users: ";
-				for (size_t n = 0; n < clients[k].getChannel(l)->getUsers().size(); ++n){
-					std::cout << n << ": " << clients[k].getChannel(l)->getUser(n) << ", ";
-				}
-                std::cout << std::endl;
-                std::cout << "- operators: ";
-                for (size_t n = 0; n < clients[k].getChannel(l)->getOperators().size(); ++n){
-					std::cout << n << ": " << clients[k].getChannel(l)->getOperator(n) << ", ";
-				}
-				std::cout << std::endl;
-			}
-			std::cout << "-----------------------------------------" << std::endl;
-			std::cout << std::endl;
-		}
-	}
-}
-
-/* Elegimos el methodo simple por falta de informacion sobre ciertos casos en la documnetacion y ejemplos poco claros de chatGPT:
-        - se permite el uso de + y - a la vez (hay ejemplos de uso con + y - a la vez), y si es asi el orden es indiferente (...)?
-        - el uso de multiples + o - (...)
-        - que agrupacion esta permitida? (...)
-        - usar el mismo comando a la vez de formas opuestas -i+i (...)
-        - usar el mimso comando dos veces seguidas +i+i (ignora la segunda).
-        - no hay filtro de agrupacion como se deben de ordenar los parametros de cada opcion (argumentos en el mismo orden que las letras)
-        - que pautas de separacion hay, "+i +k -o", "+ik -o", "+ik-o".(...) */
-
-/* Mantenemos la opcion mas simple para evitar situaciones donde no sabemos como explicar lo quie debe hacer y evitar asi contradiciones.
-        - si faltan argumentos se ignora el comando (Docu.)
-        - si hay mas comandos de la cuenta se indica que es ilegible (Propia eleccion)
-*/
 
 void ListModes(std::vector<Client>& clients, size_t i, Channel *channel)
 {
@@ -399,12 +341,16 @@ void ListModes(std::vector<Client>& clients, size_t i, Channel *channel)
     if(channel->getInviteOnly())
         msg = msg + "i";
     if(channel->getLimitChannel())
-        msg = msg + "l";
+    {
+        std::stringstream lim;
+        lim << channel->getLimit();
+        msg = "l" + msg + " " + lim.str();
+    }
     if(channel->getPasswd().size() != 0)
-        msg = msg + "k " + channel->getPasswd();
+        msg = "k" + msg + " " + channel->getPasswd();
     if(msg.size() != 0)
         msg = " +" + msg;
-    SendMsg(clients, i, channel->getName() + msg + "\n");
+    SendMsg(clients, i, ":ircserver 324 " + clients[i].getNick() + " " + channel->getName() + msg + "\r\n");
 }
 
 int MinusConfig(std::vector<Client>& clients, size_t i, std::vector<std::string> parametros, Channel *channel, char buff[1024])
@@ -421,17 +367,17 @@ int MinusConfig(std::vector<Client>& clients, size_t i, std::vector<std::string>
     {
         if (parametros.size() != 4)
         {
-            SendMsg(clients, i, std::string(buff) + ": Not enough parameters\n");
+            SendMsg(clients, i, ":ircserver 461 " + clients[i].getNick() + " " + std::string(buff) + " :Not enough parameters\r\n");
             return 0;
         }
         else if (!DoesExist(clients, parametros[3]))
         {
-            SendMsg(clients, i, parametros[3] + ": No such nick\n");
+            SendMsg(clients, i, ":ircserver 401 " + clients[i].getNick() + " " + parametros[3] + " :No such nick\r\n");
             return 0;
         }
         else if (parametros[3] == channel->getFounder())
         {
-            SendMsg(clients, i, parametros[3] + ": Cannot remove privileges from channel founder\n");
+            SendMsg(clients, i, ":ircserver 484 " + clients[i].getNick() + " " + parametros[3] + " :Cannot remove privileges from channel founder\r\n");
             return 0;
         }
         else
@@ -439,7 +385,7 @@ int MinusConfig(std::vector<Client>& clients, size_t i, std::vector<std::string>
     }
     else
     {
-        SendMsg(clients, i, "Unknown MODE flag\n");
+        SendMsg(clients, i, ":ircserver 472 " + clients[i].getNick() + " " + std::string(buff) + " :Unknown MODE flag\r\n");
         return 0;
     }
     return 1;
@@ -460,9 +406,9 @@ int PlusConfig(std::vector<Client>& clients, size_t i, std::vector<std::string> 
     else if(parametros[2][1] == 'l')
     {
         if (parametros.size() != 4)
-            SendMsg(clients, i, std::string(buff) + ": Not enough parameters\n");
+            SendMsg(clients, i, ":ircserver 461 " + clients[i].getNick() + " " + std::string(buff) + " :Not enough parameters\r\n");
         else if (parametros[3].find_first_not_of("0123456789") != std::string::npos || std::atoi(parametros[3].c_str()) < 1 || 2147483647 < std::atoi(parametros[3].c_str()))
-            SendMsg(clients, i, parametros[3] + ": Invalid limit\n");
+            SendMsg(clients, i, ":ircserver 999 " + clients[i].getNick() + " " + parametros[3] + " :Invalid limit\r\n");
         else
         {
             channel->setLimitChannel(true);
@@ -473,9 +419,9 @@ int PlusConfig(std::vector<Client>& clients, size_t i, std::vector<std::string> 
     else if(parametros[2][1] == 'k')
     {
         if (parametros.size() != 4)
-            SendMsg(clients, i, std::string(buff) + ": Not enough parameters\n");
+            SendMsg(clients, i, ":ircserver 461 " + clients[i].getNick() + " " + std::string(buff) + " :Not enough parameters\r\n");
         else if (parametros[3].length() > 23)
-            SendMsg(clients, i, parametros[3] + ": Password too long\n");
+            SendMsg(clients, i, ":ircserver 999 " + clients[i].getNick() + " " + parametros[3] + " :Password too long\r\n");
         else
         {
             channel->setPasswd(parametros[3]);
@@ -485,9 +431,9 @@ int PlusConfig(std::vector<Client>& clients, size_t i, std::vector<std::string> 
     else if(parametros[2][1] == 'o')
     {
         if (parametros.size() != 4)
-            SendMsg(clients, i, std::string(buff) + ": Not enough parameters\n");
+            SendMsg(clients, i, ":ircserver 461 " + clients[i].getNick() + " " + std::string(buff) + " :Not enough parameters\r\n");
         else if(!DoesExist(clients, parametros[3]))
-            SendMsg(clients, i, parametros[3] + ": No such nick\n");
+            SendMsg(clients, i, ":ircserver 401 " + clients[i].getNick() + " " + parametros[3] + " :No such nick\r\n");
         else
         {
             for (size_t j = 0; j < channel->getUsers().size(); ++j)
@@ -499,20 +445,20 @@ int PlusConfig(std::vector<Client>& clients, size_t i, std::vector<std::string> 
                 }
     
             }
-            SendMsg(clients, i, parametros[3] + ": You're not on that channel\n");
+            SendMsg(clients, i, ":ircserver 442 " + clients[i].getNick() + " " + parametros[3] + " :You're not on that channel\r\n");
         }
     }
     else
-        SendMsg(clients, i, "Unknown MODE flag\n");
+        SendMsg(clients, i, ":ircserver 472 " + clients[i].getNick() + " " + std::string(buff) + " :Unknown MODE flag\r\n");
     return 0;
 }
 
 void CmdMODE(std::vector<Client>& clients, size_t i, std::vector<std::string> parametros, char buff[1024])
 {
     if (clients[i].getPasswd() == false || clients[i].getNick().empty() || clients[i].getUser()->getUserName().empty())
-        SendMsg(clients, i, "You have not registered\n");
+        SendMsg(clients, i, ":ircserver 451 " + (clients[i].getNick().empty() ? "*" : clients[i].getNick()) + " :You have not registered\r\n");
     else if (parametros.size() < 2)
-        SendMsg(clients, i, std::string(buff) + ": Not enough parameters\n");
+        SendMsg(clients, i, ":ircserver 461 " + clients[i].getNick() + " " + std::string(buff) + " :Not enough parameters\r\n");
     else if (parametros.size() >= 2 && parametros.size() <= 4)
     {
         if (parametros[1][0] == '&' || parametros[1][0] == '#')
@@ -532,32 +478,32 @@ void CmdMODE(std::vector<Client>& clients, size_t i, std::vector<std::string> pa
                                 else if(parametros[2].size() == 2 && parametros[2][0] == '-')
                                 {
                                     if (MinusConfig(clients, i, parametros, clients[i].getChannel(j), buff))
-                                        ListenEverybody(clients, clients[i].getChannel(j), std::string(buff) + "\n", 0);
+                                        ListenEverybody(clients, clients[i].getChannel(j), ":" + clients[i].getNick() + "!" + clients[i].getUser()->getUserName() + "@" + clients[i].getIp() + " " + buff + "\r\n", 0);
                                 }
                                 else if(parametros[2].size() == 2 && parametros[2][0] == '+')
                                 {
                                     if (PlusConfig(clients, i, parametros, clients[i].getChannel(j), buff))
-                                        ListenEverybody(clients, clients[i].getChannel(j), std::string(buff) + "\n", 0);
+                                        ListenEverybody(clients, clients[i].getChannel(j), ":" + clients[i].getNick() + "!" + clients[i].getUser()->getUserName() + "@" + clients[i].getIp() + " " + buff + "\r\n", 0);
                                 }
                                 else 
-                                    SendMsg(clients, i, "Unknown MODE flag\n");
+                                    SendMsg(clients, i, ":ircserver 472 " + clients[i].getNick() + " " + std::string(buff) + " :Unknown MODE flag\r\n");
                                 return ;
                             }
                         }
-                        SendMsg(clients, i, parametros[1] + ": You're not channel operator\n");
+                        SendMsg(clients, i, ":ircserver 482 " + clients[i].getNick() + " " + parametros[1] + " :You're not channel operator\r\n");
                         return ;
                     }
                 }
-                SendMsg(clients, i, parametros[1] + ": You're not on that channel\n");
+                SendMsg(clients, i, ":ircserver 442 " + clients[i].getNick() + " " + parametros[1] + " :You're not on that channel\r\n");
             }
             else
-                SendMsg(clients, i, parametros[1] + ": No such channel\n");
+                SendMsg(clients, i, ":ircserver 403 " + clients[i].getNick() + " " + parametros[1] + " :No such channel\r\n");
         }
         else
-            SendMsg(clients, i, parametros[1] + ": Bad Channel Mask\n");
+            SendMsg(clients, i, ":ircserver 476 " + clients[i].getNick() + " " + parametros[1] + " :Bad Channel Mask\r\n");
     }
     else
-        SendMsg(clients, i, std::string(buff) + ": Erroneous parameters\n");
+        SendMsg(clients, i, ":ircserver 461 " + clients[i].getNick() + " " + std::string(buff) + " :Erroneous parameters\r\n");
 }
 
 void ConfigTopic(std::vector<Client>& clients, size_t i, std::vector<std::string> parametros, Channel *channel, char buff[1024])
@@ -566,23 +512,23 @@ void ConfigTopic(std::vector<Client>& clients, size_t i, std::vector<std::string
     {
         if (!channel->getTopic()->getTopic().empty())
         {
-            SendMsg(clients, i, parametros[1] + " :" + channel->getTopic()->getTopic() + "\n");
-            SendMsg(clients, i, parametros[1] + " Topic Athor:" +channel->getTopic()->getAuthor() + "\n");
+            SendMsg(clients, i, ":ircserver 332 " + clients[i].getNick() + " " + parametros[1] + " :" + channel->getTopic()->getTopic() + "\r\n");
+            SendMsg(clients, i, ":ircserver 333 " + clients[i].getNick() + " " + parametros[1] + " " + channel->getTopic()->getAuthor() + "\r\n");
         }
         else
-            SendMsg(clients, i, parametros[1] + ": No topic is set\n");
+            SendMsg(clients, i, ":ircserver 331 " + clients[i].getNick() + " " + parametros[1] + " :No topic is set\r\n");
     }
     else
     {
         std::string topic = FtColons(buff);
         if (topic.length() > 390)
         {
-            SendMsg(clients, i, topic + ": Topic too long\n");
+            SendMsg(clients, i, ":ircserver 416 " + clients[i].getNick() + " " + topic + " :Topic too long\r\n");
             return ;
         }
         Topic tempTopic(topic, clients[i].getNick());
         channel->setTopic(tempTopic);
-        ListenEverybody(clients, channel, std::string(buff) + "\n", 0);
+        ListenEverybody(clients, channel, ":" + clients[i].getNick() + "!" + clients[i].getUser()->getUserName() + "@" + clients[i].getIp() + " TOPIC " + channel->getName() + " :" + topic + "\r\n", 0);
     }
 }
 
@@ -590,7 +536,7 @@ void CmdTOPIC(std::vector<Client>& clients, size_t i, std::vector<std::string> p
 {
     if (!clients[i].getPasswd() || clients[i].getNick().empty() || clients[i].getUser()->getUserName().empty())
     {
-        SendMsg(clients, i, "You have not registered\n");
+        SendMsg(clients, i, ":ircserver 451 " + (clients[i].getNick().empty() ? "*" : clients[i].getNick()) + " :You have not registered\r\n");
         return;
     }
     if (parametros.size() >= 2)
@@ -599,7 +545,7 @@ void CmdTOPIC(std::vector<Client>& clients, size_t i, std::vector<std::string> p
         {
             if (parametros[2][0] != ':')
             {
-                SendMsg(clients, i, std::string(buff) + ": Erroneous parameters\n");
+                SendMsg(clients, i, ":ircserver 461 " + clients[i].getNick() + " " + std::string(buff) + " :Erroneous parameters\r\n");
                 return;
             }
         }
@@ -621,27 +567,27 @@ void CmdTOPIC(std::vector<Client>& clients, size_t i, std::vector<std::string> p
                                     return ;
                                 }
                             }
-                            SendMsg(clients, i, parametros[1] + ": You're not channel operator\n");
+                            SendMsg(clients, i, ":ircserver 482 " + clients[i].getNick() + " " + parametros[1] + " :You're not channel operator\r\n");
                         }
                         else
                             ConfigTopic(clients, i, parametros, clients[i].getChannel(j), buff);
                         return ;
                     }
                 }
-                SendMsg(clients, i, parametros[1] + ": You're not on that channel\n");
+                SendMsg(clients, i, ":ircserver 442 " + clients[i].getNick() + " " + parametros[1] + " :You're not on that channel\r\n");
                 return ;
             }
             else
-                SendMsg(clients, i, parametros[1] + ": No such channel\n");
+                SendMsg(clients, i, ":ircserver 403 " + clients[i].getNick() + " " + parametros[1] + " :No such channel\r\n");
         }
         else
-            SendMsg(clients, i, parametros[1] + ": Bad Channel Mask\n");
+            SendMsg(clients, i, ":ircserver 476 " + clients[i].getNick() + " " + parametros[1] + " :Bad Channel Mask\r\n");
     }
     else
-        SendMsg(clients, i, std::string(buff) + ": Not enough parameters\n");
+        SendMsg(clients, i, ":ircserver 461 " + clients[i].getNick() + " " + std::string(buff) + " :Not enough parameters\r\n");
 }
 
-void ConfigInvite(std::vector<Client>& clients, size_t i, std::vector<std::string> parametros, char buff[1024])
+void ConfigInvite(std::vector<Client>& clients, size_t i, std::vector<std::string> parametros)
 {
     for (size_t j = 0; j < clients.size(); ++j)
     {
@@ -651,14 +597,14 @@ void ConfigInvite(std::vector<Client>& clients, size_t i, std::vector<std::strin
             {
                 if (clients[j].getChannel(k)->getName() == parametros[2])
                 {
-                    SendMsg(clients, i, parametros [1] + " " + parametros[2] + ": is already on channel\n");
+                    SendMsg(clients, i, ":ircserver 443 " + clients[i].getNick() + " " + parametros[1] + " " + parametros[2] + " :is already on channel\r\n");
                     return ;
                 }
             }
             if(clients[j].setInvitation(parametros[2]))
             {
-                SendMsg(clients, i, parametros[1] + " " + parametros[2] + "\n");
-                SearchTarget(clients, parametros[1], std::string(buff) + "\n", i);
+                SendMsg(clients, i, ":ircserver 341 " + clients[i].getNick() + " " + parametros[1] + " " + parametros[2] + "\r\n");
+                SearchTarget(clients, parametros[1], ":" + clients[i].getNick() + "!" + clients[i].getUser()->getUserName() + "@" + clients[i].getIp() + " INVITE " + parametros[1] + " :" + parametros[2] + "\r\n", i);
             }
         }
     }
@@ -667,9 +613,9 @@ void ConfigInvite(std::vector<Client>& clients, size_t i, std::vector<std::strin
 void CmdINVITE(std::vector<Client>& clients, size_t i, std::vector<std::string> parametros, char buff[1024])
 {
     if (clients[i].getPasswd() == false || clients[i].getNick().empty() || clients[i].getUser()->getUserName().empty())
-        SendMsg(clients, i, "You have not registered\n");
+        SendMsg(clients, i, ":ircserver 451 " + (clients[i].getNick().empty() ? "*" : clients[i].getNick()) + " :You have not registered\r\n");
     else if (parametros.size() < 3)
-        SendMsg(clients, i, std::string(buff) + ": Not enough parameters\n");
+        SendMsg(clients, i, ":ircserver 461 " + clients[i].getNick() + " " + std::string(buff) + " :Not enough parameters\r\n");
     else if (parametros.size() == 3)
     {
         if(DoesExist(clients, parametros[1]))
@@ -690,49 +636,48 @@ void CmdINVITE(std::vector<Client>& clients, size_t i, std::vector<std::string> 
                                     {
                                         if (clients[i].getChannel(j)->getOperator(k) == clients[i].getNick())
                                         {
-                                            ConfigInvite(clients, i, parametros, buff);
+                                            ConfigInvite(clients, i, parametros);
                                             return ;
                                         }
                                     }
-                                    SendMsg(clients, i, parametros[2] + ": You're not channel operator\n");
+                                    SendMsg(clients, i, ":ircserver 482 " + clients[i].getNick() + " " + parametros[2] + " :You're not channel operator\r\n");
                                 }
                                 else
-                                    ConfigInvite(clients, i, parametros, buff);
+                                    ConfigInvite(clients, i, parametros);
                                 return ;
                             }
                         }
-                        SendMsg(clients, i, parametros[2] + ": You're not on that channel\n");
+                        SendMsg(clients, i, ":ircserver 442 " + clients[i].getNick() + " " + parametros[2] + " :You're not on that channel\r\n");
                         return ;
                     }
                     else
-                        SendMsg(clients, i, parametros[1] + ": No such channel\n");
+                        SendMsg(clients, i, ":ircserver 403 " + clients[i].getNick() + " " + parametros[2] + " :No such channel\r\n");
                 }
                 else
-                    SendMsg(clients, i, parametros[2] + ": Bad Channel Mask\n");
+                    SendMsg(clients, i, ":ircserver 476 " + clients[i].getNick() + " " + parametros[2] + " :Bad Channel Mask\r\n");
             }
             else
-                SendMsg(clients, i, parametros[1] + ": You can't invite yourself\n");
+                SendMsg(clients, i, ":ircserver 999 " + clients[i].getNick() + " " + parametros[1] + " :You can't invite yourself\r\n");
         }
         else
-            SendMsg(clients, i, parametros[1] + ": No such nick\n");
+            SendMsg(clients, i, ":ircserver 401 " + clients[i].getNick() + " " + parametros[1] + " :No such nick\r\n");
     }
     else
-        SendMsg(clients, i, std::string(buff) + ": Erroneous parameters\n");
+        SendMsg(clients, i, ":ircserver 461 " + clients[i].getNick() + " " + std::string(buff) + " :Erroneous parameters\r\n");
 }
 
 
-int ConfigKick(std::vector<Client>& clients, Channel *channel, std::string nick, std::vector<std::string> parametros, char buff[1024])
+int ConfigKick(std::vector<Client>& clients, size_t i ,Channel *channel, std::string nick, std::vector<std::string> parametros, char buff[1024])
 {
     for (size_t k = 0; k < clients.size(); ++k)
     {
         if (nick == clients[k].getNick())
         {
             std::string msg = FtColons(buff);
-            clients[k].removeChannel(channel);
             if(!msg.empty())
                 msg = ": " + msg;
-            SendMsg(clients, k, parametros[0] + " " + parametros[1] + " " + nick + msg + "\n");
-            ListenEverybody(clients, channel, parametros[0] + " " + parametros[1] + " " + nick + msg + "\n", 0);
+            ListenEverybody(clients, channel, ":" + clients[i].getNick() + "!" + clients[i].getUser()->getUserName() + "@" + clients[i].getIp() + " " + parametros[0] + " " + parametros[1] + " " + nick + msg + "\r\n", 0);
+            clients[k].removeChannel(channel);
             return 1;
         }
     }
@@ -742,14 +687,14 @@ int ConfigKick(std::vector<Client>& clients, Channel *channel, std::string nick,
 void CmdKICK(std::vector<Client>& clients, size_t i, std::vector<std::string> parametros, char buff[1024])
 {   
     if (clients[i].getPasswd() == false || clients[i].getNick().empty() || clients[i].getUser()->getUserName().empty())
-        SendMsg(clients, i, "You have not registered\n");
+        SendMsg(clients, i, ":ircserver 451 " + (clients[i].getNick().empty() ? "*" : clients[i].getNick()) + " :You have not registered\r\n");
     if (parametros.size() >= 3) 
     {
         if (parametros.size() > 3)
         {
             if (parametros[3][0] != ':')
             {
-                SendMsg(clients, i, std::string(buff) + ": Erroneous parameters\n");
+                SendMsg(clients, i, ":ircserver 461 " + clients[i].getNick() + " " + std::string(buff) + " :Erroneous parameters\r\n");
                 return;
             }
         }
@@ -769,26 +714,26 @@ void CmdKICK(std::vector<Client>& clients, size_t i, std::vector<std::string> pa
                                 for(size_t l = 0; l < temp_users.size(); ++l)
                                 {
                                     if(temp_users[l] == clients[i].getChannel(j)->getFounder())
-                                        SendMsg(clients, i, temp_users[l] + ": Cannot kick channel founder\n");
-                                    else if(!ConfigKick(clients, clients[i].getChannel(j), temp_users[l], parametros, buff))
-                                        SendMsg(clients, i, temp_users[l] + ": No such nick\n");
+                                        SendMsg(clients, i, ":ircserver 484 " + clients[i].getNick() + " " + temp_users[l] + " :Cannot kick channel founder\r\n");
+                                    else if(!ConfigKick(clients, i, clients[i].getChannel(j), temp_users[l], parametros, buff))
+                                        SendMsg(clients, i, ":ircserver 401 " + clients[i].getNick() + " " + temp_users[l] + " :No such nick\r\n");
                                 }
                                 return ;
                             }
                         }
-                        SendMsg(clients, i, parametros[1] + ": You're not channel operator\n");
+                        SendMsg(clients, i, ":ircserver 482 " + clients[i].getNick() + " " + parametros[1] + " :You're not channel operator\r\n");
                         return ;
                     }
                 }
-                SendMsg(clients, i, parametros[1] + ": You're not on that channel\n");
+                SendMsg(clients, i, ":ircserver 442 " + clients[i].getNick() + " " + parametros[1] + " :You're not on that channel\r\n");
                 return ;
             }
             else
-                SendMsg(clients, i, parametros[1] + ": No such channel\n");
+                SendMsg(clients, i, ":ircserver 403 " + clients[i].getNick() + " " + parametros[1] + " :No such channel\r\n");
         }
         else
-            SendMsg(clients, i, parametros[1] + ": Bad Channel Mask\n");
+            SendMsg(clients, i, ":ircserver 476 " + clients[i].getNick() + " " + parametros[1] + " :Bad Channel Mask\r\n");
     }
     else
-        SendMsg(clients, i, std::string(buff) + ": Not enough parameters\n");
+        SendMsg(clients, i, ":ircserver 461 " + clients[i].getNick() + " " + std::string(buff) + " :Not enough parameters\r\n");
 }

@@ -68,47 +68,87 @@ int ForbiddenChar(std::vector<std::string> parametros)
 	return 0;
 }
 
+int FtCapabilities(std::vector<Client>& clients, size_t i, std::vector<std::string> parametros)
+{
+	if (parametros[0] == "CAP")
+	{
+		if (parametros.size() > 1)
+		{
+			if (parametros[1] == "LS")
+			{
+				std::string response = "CAP * LS :\r\n";
+				send(clients[i].getFd(), response.c_str(), response.size(), 0);
+			}
+			else if (parametros[1] == "REQ")
+			{
+				std::string response = "CAP * NAK :" + (parametros.size() > 2 ? parametros[2] : "") + "\r\n";
+				send(clients[i].getFd(), response.c_str(), response.size(), 0);
+			}
+		}
+		return 1;
+	}
+	return 0;
+}
+
 void Server::ReceiveNewData(size_t i)
 {
-	char buff[1024];
-	memset(buff, 0, sizeof(buff));
-	ssize_t bytes = recv(fds[i].fd, buff, sizeof(buff) - 1 , 0);
+    char buff[1024];
+    memset(buff, 0, sizeof(buff));
+    ssize_t bytes = recv(fds[i].fd, buff, sizeof(buff) - 1, 0);
 
-	if(bytes <= 0) {
-		std::cout << RED << "Client <" << fds[i].fd << "> Disconnected" << WHI << std::endl;
-		ClearClient(fds[i].fd);
-		close(fds[i].fd);
-	} else {
-		if(bytes > 1)
+    if (bytes <= 0)
+    {
+        std::cout << RED << "Client <" << fds[i].fd << "> Disconnected" << WHI << std::endl;
+        ClearClient(fds[i].fd);
+        close(fds[i].fd);
+        return;
+    }
+
+    clients[i].getInputBuffer() += std::string(buff, bytes);
+	size_t pos;
+
+	while ((pos = clients[i].getInputBuffer().find('\n')) != std::string::npos)
+	{
+		std::string line = clients[i].getInputBuffer().substr(0, pos);
+		clients[i].getInputBuffer().erase(0, pos + 1);
+
+		if (!line.empty() && line[line.length() - 1] == '\r')
+			line.erase(line.length() - 1);
+		if (line.empty())
+			continue;
+		
+		char buffer[1024];
+		std::strcpy(buffer, line.c_str());
+		std::vector<std::string> parametros = ft_split(buffer, ' ');
+
+		if (parametros.empty())
+			continue;
+		if (FtCapabilities(clients, i, parametros))
+			return;
+		if (parametros[0] == "PASS")
+			CmdPASS(clients, passwd, i, parametros, buffer);
+		else if (parametros[0] == "NICK")
+			CmdNICK(clients, i, parametros, buffer);
+		else if (parametros[0] == "USER")
+			CmdUSER(clients, i, parametros, buffer);
+		else if (parametros[0] == "JOIN")
+			CmdJOIN(clients, i, parametros, buffer);
+		else if (parametros[0] == "PRIVMSG")
+			CmdPRIVMSG(clients, i, parametros, buffer);
+		else if (parametros[0] == "KICK")
+			CmdKICK(clients, i, parametros, buffer);
+		else if (parametros[0] == "TOPIC")
+			CmdTOPIC(clients, i, parametros, buffer);
+		else if (parametros[0] == "INVITE")
+			CmdINVITE(clients, i, parametros, buffer);
+		else if (parametros[0] == "MODE")
+			CmdMODE(clients, i, parametros, buffer);
+		else
 		{
-			buff[bytes - 1] = '\0';
-			std::vector<std::string> parametros = ft_split(buff, ' ');
-			if (ForbiddenChar(parametros))
-				send(clients[i].getFd(), (std::string(buff) + " :Invalid characters in message.\n").c_str(), 33 + strlen(buff), 0);
-			else if (parametros[0] == "PASS")
-				CmdPASS(clients, passwd, i, parametros, buff);
-			else if (parametros[0] == "NICK")
-				CmdNICK(clients, i, parametros, buff);
-			else if (parametros[0] == "USER")
-				CmdUSER(clients, i, parametros, buff);
-			else if(parametros[0] == "JOIN")
-				CmdJOIN(clients, i, parametros, buff);
-			else if (parametros[0] == "PRIVMSG")
-				CmdPRIVMSG(clients, i, parametros, buff);
-			else if (parametros[0] == "KICK")
-				CmdKICK(clients, i, parametros, buff);
-			else if (parametros[0] == "TOPIC")
-                CmdTOPIC(clients, i, parametros, buff);
-			else if (parametros[0] == "INVITE")
-    			CmdINVITE(clients, i, parametros, buff);
-			else if (parametros[0] == "MODE")
-    			CmdMODE(clients, i, parametros, buff);
-			else if (parametros[0] == "INFO")
-				CmdINFO(clients, i, buff);
-			else
-				send(clients[i].getFd(), (std::string(buff) + " :Command not found.\n").c_str(), 21 + strlen(buff), 0);
+			std::string error_msg = ":ircserver 421 " + clients[i].getNick() + " " + line + " :Unknown command\r\n";
+			send(clients[i].getFd(), error_msg.c_str(), error_msg.length(), 0);
 		}
-	}
+    }
 }
 
 void Server::AcceptNewClient()

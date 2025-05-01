@@ -13,6 +13,7 @@
 # include <csignal>
 # include <cstdlib>
 # include <cstring>
+#include <sstream>
 
 # include "Client.hpp"
 # include "Channel.hpp"
